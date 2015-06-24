@@ -2,7 +2,8 @@
 # incremental version 0.9.1_dev
 
 # example usage: 
-# video2gallery -v -u "https://kirgahn.asuscomm.com/ads.ln/Str8/flv/" -fl "https://kirgahn.asuscomm.com/js/flowplayer/flowplayer-3.1.5.swf" -fs "https://kirgahn.asuscomm.com/js/flowplayer/flowplayer-3.1.4.min.js"
+# video2gallery -v -u "https://myexample.com/videgalleries/" -fl "https://myexample.com/js/flowplayer/flowplayer-3.1.5.swf" -fs "https://myexample.com/js/flowplayer/flowplayer-3.1.4.min.js"
+# "filetypes" defines the extensions this script will recursively search for, if you wish to generate galleries for different extensions just modify its value
 
 import glob2
 import time
@@ -12,13 +13,10 @@ import argparse
 import mimetypes
 import urllib.request
 import random
-#import datetime
-#from moviepy.editor import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-d","--directory", help="Directory to search for HTML5 compliant videos", type=str)
 parser.add_argument("-u", "--baseurl", help="Prefix file with the specifice base URL, useful to generate web compatible galleries", type=str)
-#parser.add_argument("-c", "--convert2url", help="Convert filepath to URL, if unspecified assume no", action="store_true" )
 parser.add_argument("-fl", "--flowplayerpath", help="Flowplayer path. If empty assume \"directory/js/flowplayer/flowplayer-3.1.5.swf\". If empty and baseURL is specified assume \"baseURL/js/flowplayer/flowplayer-3.1.5.swf\"", type=str)
 parser.add_argument("-fs", "--flowplayerscript", help="Flowplayer js script path. If empty assume \"directory/js/flowplayer/flowplayer-3.1.4.min.js\". If empty and baseURL is specified assume \"baseURL/js/flowplayer/flowplayer-3.1.4.min.js\"", type=str)
 parser.add_argument("-f","--filepaging", help="Number of files per each page, if unspecified assumes 10", type=int)
@@ -27,8 +25,9 @@ parser.add_argument("-v", "--verbose", help="Print additional info", action="sto
 
 mimetypes.init()
 args = parser.parse_args()
+filetypes=["webm","mp4","ogg","ogv","flv","gif","jpg","jpeg","jpe","png","bmp"]
 
-############ Function to create page navigation (first|previous|next|last)
+############ creates page navigation
 def page_navigation(d, txt, pg, pgnum):
 	txt=txt+"<div style=\"text-align:center\">\n"
 
@@ -61,11 +60,9 @@ def page_navigation(d, txt, pg, pgnum):
 			txt=txt+"<a href=\""+d+"videogallery_"+str(pgnum-1)+".html\"> Last>></a>"
 	txt=txt+"</div>\n<br>"
 
-	#print(d,d+"videogallery_"+str(random.randint(0,pgnum)))
-	
 	return txt
 
-############ Function used to embed the video/image with the appropriate tag/player
+############ embeds the video/image object with the appropriate tag/player
 def embed_object(fileobject, filepath, txt, playerid, flowpath):
 	if mimetypes.guess_type(filepath, strict=True)[0].find("flv")>=0:
 		txt=txt+"<center><a href=\"" 
@@ -98,8 +95,7 @@ else:
 if args.verbose:
 	print("Files displayed per page:", str(files_per_page))
 
-filetypes=["webm","mp4","ogg","ogv","flv","gif","jpg","jpeg","jpe","png","bmp"]
-#filetypes=["flv"]
+
 files=[]
 
 if args.baseurl:
@@ -145,12 +141,10 @@ for page in range(0, number_of_pages):
 		saveFile = open(directory+'videogallery_'+time.strftime("%Y%m%d%H%M")+'_'+str(page)+'.html','w')
 	else:
 		saveFile = open(directory+'videogallery_'+str(page)+'.html','w')
-	#saveFile.write("<!DOCTYPE html>\n<html lang=\"en\">\n<br>\n")
-	#saveFile.write("<script src=\"/home/dpavia/bin/flowplayer/example/flowplayer-3.1.4.min.js\"></script><br>")
 	saveFile.write("<script src=\""+flowplayerscript+"\"></script><br>")
 	text=""
 
-	# Navigazione pagine in header
+	# insert page navigation here 
 	if args.baseurl:
 		text=page_navigation(baseurl, text, page, number_of_pages)
 	else:
@@ -176,7 +170,7 @@ for page in range(0, number_of_pages):
 
 	text=text+"<br>\n"
 	
-	# Navigazione pagine in footer	
+	# insert page navigation here 
 	if args.baseurl:
 		text=page_navigation(baseurl, text, page, number_of_pages)
 	else:

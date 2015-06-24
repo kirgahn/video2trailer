@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # converts/extracts slices from videos to webm format
-# incremental version 0.6
+# incremental version 0.7
 
-#import datetime
 import os
 import argparse
 from moviepy.editor import *
@@ -15,6 +14,7 @@ parser.add_argument("-s", "--starttime", help="Begin to cut video file at this t
 parser.add_argument("-e", "--endtime", help="Cut video file from starttime to this time given a \"00:00:00\" time format. If empty assume video ending", type=str)
 parser.add_argument("-r", "--resolution", help="Output videofile width in pixels, if empty assumes 640", type=int) 
 parser.add_argument("-f", "--fps", help="Output videofile frames per second, if empty assumes source fps", type=int)
+parser.add_argument("-b", "--bitrate", help="Output videofile bitrate in \"x.x\" format, if empty assumes \"1.2M\"", type=float)
 
 args = parser.parse_args()
 
@@ -49,18 +49,26 @@ if not args.fps:
 	if args.verbose:
 		print("Assuming FPS: " + str(v.fps))
 
+if not args.bitrate:
+	bitrate="\'1.2M\'"
+	if args.verbose:
+		print("Assuming bitrate: " + bitrate)
+else:
+	bitrate=str(args.bitrate)+"M"
+
 if args.verbose:
-	print("sourcefile: "+ str(sourcefile))
-	print("starttime: "+ str(starttime) + ", in seconds: " + str(starttime))
-	print("endtime: "+ str(args.endtime) + ", in seconds: " + str(endtime))
-	print("destfile: "+ str(args.destfile)+".webm")
+	print("sourcefile: "+ sourcefile)
+	print("starttime: "+ str(starttime))
+	print("endtime: "+ str(args.endtime))
+	print("destfile: "+ args.destfile+".webm")
 	print("resolution: "+ str(resolution))
 	print("fps: "+ str(fps))
+	print("bitrate: "+ bitrate)
 
 
 vo = v.subclip(starttime,endtime)
 vo = vo.resize(width=resolution)
 
-vo.write_videofile(destfile+".webm",fps=fps, bitrate='1.2M')
+vo.write_videofile(destfile+".webm",fps=fps, bitrate=bitrate)
 
 ############################################################
