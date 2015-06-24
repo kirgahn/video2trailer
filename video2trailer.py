@@ -91,4 +91,3 @@ vo = vo.resize(width=720)
 slices.append(vo)
 
 concatenate_videoclips(slices,method='compose').write_videofile(destfile, bitrate=bitrate, fps=fps)
-#concatenate_videoclips(slices,method='compose').write_videofile(destfile, bitrate='1M', fps=24)
