@@ -1,0 +1,66 @@
+#!/usr/bin/env python
+# converts/extracts slices from videos to webm format
+# incremental version 0.6
+
+#import datetime
+import os
+import argparse
+from moviepy.editor import *
+
+parser = argparse.ArgumentParser()
+parser.add_argument("sourcefile", help="Source video file", type=str)
+parser.add_argument("destfile", help="Destination video file", type=str)
+parser.add_argument("-v", "--verbose", help="Print additional info", action="store_true" )
+parser.add_argument("-s", "--starttime", help="Begin to cut video file at this time given a \"00:00:00\" time format. If empty assume \"00:00:00\"", type=str)
+parser.add_argument("-e", "--endtime", help="Cut video file from starttime to this time given a \"00:00:00\" time format. If empty assume video ending", type=str)
+parser.add_argument("-r", "--resolution", help="Output videofile width in pixels, if empty assumes 640", type=int) 
+parser.add_argument("-f", "--fps", help="Output videofile frames per second, if empty assumes source fps", type=int)
+
+args = parser.parse_args()
+
+sourcefile=args.sourcefile
+destfile=args.destfile
+resolution=args.resolution
+fps=args.fps
+
+v = VideoFileClip(sourcefile)
+
+if not args.starttime:
+	starttime=0
+	if args.verbose:
+		print("Assuming starttime is beginning of source file")
+else:
+	starttime=sum(int(x) * 60 ** i for i,x in enumerate(reversed(args.starttime.split(":"))))
+		
+if not args.endtime:
+	endtime=v.duration
+	if args.verbose:
+		print("Assuming endtime is ending of source file")
+else:
+	endtime=sum(int(x) * 60 ** i for i,x in enumerate(reversed(args.endtime.split(":"))))
+  
+if not args.resolution:
+	resolution=720
+	if args.verbose:
+		print("Assuming resolution width of: " + str(resolution))
+
+if not args.fps:
+	fps=v.fps
+	if args.verbose:
+		print("Assuming FPS: " + str(v.fps))
+
+if args.verbose:
+	print("sourcefile: "+ str(sourcefile))
+	print("starttime: "+ str(starttime) + ", in seconds: " + str(starttime))
+	print("endtime: "+ str(args.endtime) + ", in seconds: " + str(endtime))
+	print("destfile: "+ str(args.destfile)+".webm")
+	print("resolution: "+ str(resolution))
+	print("fps: "+ str(fps))
+
+
+vo = v.subclip(starttime,endtime)
+vo = vo.resize(width=resolution)
+
+vo.write_videofile(destfile+".webm",fps=fps, bitrate='1.2M')
+
+############################################################
