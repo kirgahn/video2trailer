@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# incremental version 0.3
+# incremental version 0.3.1
 
 import random
 import datetime
@@ -47,7 +47,7 @@ else:
 if not args.width:
         width=640
         if args.verbose:
-                print("Assuming bitrate: " + width)
+                print("Assuming bitrate: " + str(width))
 else:
         width=args.width
 
