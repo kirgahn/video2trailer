@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# incremental version 0.2
+# incremental version 0.3
 
 import random
 import datetime
@@ -15,6 +15,7 @@ parser.add_argument("-s", "--sliceduration", help="Duration of each slice in sec
 parser.add_argument("-dt", "--duration", help="Total duration of output file, if unspecified assume 30 seconds", type=int)
 parser.add_argument("-d", "--destfile", help="Destination video file, if unspecified append \"_trailer.webm\" to source filename", type=str)
 parser.add_argument("-f", "--fps", help="Output videofile frames per second, if empty assumes source fps", type=int)
+parser.add_argument("-w", "--width", help="Resolution width of the output file in pixels, if empty assumes 640", type=int)
 parser.add_argument("-b", "--bitrate", help="Output videofile bitrate in \"x.x\" format, if empty assumes \"1.2M\"", type=float)
 
 args = parser.parse_args()
@@ -43,6 +44,13 @@ if not args.fps:
 else:
 	fps=args.fps
 
+if not args.width:
+        width=640
+        if args.verbose:
+                print("Assuming bitrate: " + width)
+else:
+        width=args.width
+
 if not args.bitrate:
         bitrate="1.2M"
         if args.verbose:
@@ -58,6 +66,7 @@ if args.verbose:
 	print("Slice duration: "+str(sliceduration))
 	print("Webm duration: "+str(duration))
 	print("fps: "+ str(fps))
+	print("width: "+ str(width))
 	print("bitrate: "+ bitrate)
 
 
@@ -75,7 +84,7 @@ while n <= cycles:
 	s = random.randint(prevpos+1,round(int(v.duration)/100*(n*step)))
 	prevpos = s
 	vo = v.subclip(s,s+sliceduration)
-	vo = vo.resize(width=640)
+	vo = vo.resize(width=width)
 	slices.append(vo)
 	n = n + 1
 
