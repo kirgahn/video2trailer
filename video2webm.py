@@ -50,7 +50,7 @@ if not args.fps:
 		print("Assuming FPS: " + str(v.fps))
 
 if not args.bitrate:
-	bitrate="\'1.2M\'"
+	bitrate="1.2M"
 	if args.verbose:
 		print("Assuming bitrate: " + bitrate)
 else:
