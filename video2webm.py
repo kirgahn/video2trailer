@@ -15,6 +15,7 @@ parser.add_argument("-e", "--endtime", help="Cut video file from starttime to th
 parser.add_argument("-r", "--resolution", help="Output videofile width in pixels, if empty assumes 640", type=int) 
 parser.add_argument("-f", "--fps", help="Output videofile frames per second, if empty assumes source fps", type=int)
 parser.add_argument("-b", "--bitrate", help="Output videofile bitrate in \"x.x\" format, if empty assumes \"1.2M\"", type=float)
+parser.add_argument("-m", "--mute", help="Removes audio from videoclip, if not specified keeps audio", action="store_true")
 
 args = parser.parse_args()
 
@@ -68,6 +69,10 @@ if args.verbose:
 
 vo = v.subclip(starttime,endtime)
 vo = vo.resize(width=resolution)
+
+if args.mute:
+	#print("no audio")
+	vo = vo.without_audio()
 
 vo.write_videofile(destfile+".webm",fps=fps, bitrate=bitrate)
 
