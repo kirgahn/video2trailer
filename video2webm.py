@@ -12,9 +12,9 @@ parser.add_argument("sourcefile", help="Source video file", type=str)
 parser.add_argument("-v", "--verbose", help="Print additional info", action="store_true" )
 parser.add_argument("-s", "--starttime", help="Begin to cut video file at this time given a \"00:00:00\" time format. If empty assume \"00:00:00\"", type=str)
 parser.add_argument("-e", "--endtime", help="Cut video file from starttime to this time given a \"00:00:00\" time format. If empty assume video ending", type=str)
-parser.add_argument("-r", "--resolution", help="Output videofile width in pixels, if empty assumes 640", type=int) 
-parser.add_argument("-f", "--fps", help="Output videofile frames per second, if empty assumes source fps", type=int)
-parser.add_argument("-b", "--bitrate", help="Output videofile bitrate in \"x.x\" format, if empty assumes \"1.2M\"", type=float)
+parser.add_argument("-r", "--resolution", help="Output videofile width in pixels, if empty assumes 720", type=int) 
+parser.add_argument("-f", "--fps", help="Output videofile frames per second, if empty assumes 15 fps", type=int)
+parser.add_argument("-b", "--bitrate", help="Output videofile bitrate in \"x.x\" format, if empty assumes \"0.5M\"", type=float)
 parser.add_argument("-m", "--mute", help="Removes audio from videoclip, if not specified keeps audio", action="store_true")
 parser.add_argument("-d", "--destinationfile", help="Destination file, if unspecified assumes \"filename.webm\"", type=str)
 
@@ -22,7 +22,7 @@ args = parser.parse_args()
 
 sourcefile=args.sourcefile
 resolution=args.resolution
-fps=args.fps
+#fps=args.fps
 
 v = VideoFileClip(sourcefile)
 
@@ -46,12 +46,15 @@ if not args.resolution:
 		print("Assuming resolution width of: " + str(resolution))
 
 if not args.fps:
-	fps=v.fps
+	fps=int(15)
 	if args.verbose:
-		print("Assuming FPS: " + str(v.fps))
+		print("Assuming FPS: " + str(fps))
+else:
+	fps=args.fps
+	
 
 if not args.bitrate:
-	bitrate="1.2M"
+	bitrate="0.5M"
 	if args.verbose:
 		print("Assuming bitrate: " + bitrate)
 else:
@@ -63,7 +66,6 @@ if not args.destinationfile:
 		print("Assuming destination file: " + destfile)
 else:
 	destfile=args.destinationfile
-	bitrate=str(args.bitrate)+"M"
 
 if args.verbose:
 	print("sourcefile: "+ sourcefile)
@@ -74,14 +76,14 @@ if args.verbose:
 	print("fps: "+ str(fps))
 	print("bitrate: "+ bitrate)
 
-
 vo = v.subclip(starttime,endtime)
 vo = vo.resize(width=resolution)
 
 if args.mute:
-	#print("no audio")
 	vo = vo.without_audio()
+	if args.verbose:
+		print("selected no audio")
 
-vo.write_videofile(destfile,fps=fps, bitrate=bitrate)
+vo.write_videofile(destfile,codec='libvpx',fps=fps, bitrate=bitrate)
 
 ############################################################
