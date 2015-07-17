@@ -8,7 +8,7 @@ from moviepy.editor import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument("sourcefile", help="Source video file", type=str)
-parser.add_argument("destfile", help="Destination video file", type=str)
+#parser.add_argument("destfile", help="Destination video file", type=str)
 parser.add_argument("-v", "--verbose", help="Print additional info", action="store_true" )
 parser.add_argument("-s", "--starttime", help="Begin to cut video file at this time given a \"00:00:00\" time format. If empty assume \"00:00:00\"", type=str)
 parser.add_argument("-e", "--endtime", help="Cut video file from starttime to this time given a \"00:00:00\" time format. If empty assume video ending", type=str)
@@ -16,11 +16,11 @@ parser.add_argument("-r", "--resolution", help="Output videofile width in pixels
 parser.add_argument("-f", "--fps", help="Output videofile frames per second, if empty assumes source fps", type=int)
 parser.add_argument("-b", "--bitrate", help="Output videofile bitrate in \"x.x\" format, if empty assumes \"1.2M\"", type=float)
 parser.add_argument("-m", "--mute", help="Removes audio from videoclip, if not specified keeps audio", action="store_true")
+parser.add_argument("-d", "--destinationfile", help="Destination file, if unspecified assumes \"filename.webm\"", type=str)
 
 args = parser.parse_args()
 
 sourcefile=args.sourcefile
-destfile=args.destfile
 resolution=args.resolution
 fps=args.fps
 
@@ -57,11 +57,19 @@ if not args.bitrate:
 else:
 	bitrate=str(args.bitrate)+"M"
 
+if not args.destinationfile:
+	destfile=sourcefile + ".webm"
+	if args.verbose:
+		print("Assuming destination file: " + destfile)
+else:
+	destfile=args.destinationfile
+	bitrate=str(args.bitrate)+"M"
+
 if args.verbose:
 	print("sourcefile: "+ sourcefile)
 	print("starttime: "+ str(starttime))
 	print("endtime: "+ str(args.endtime))
-	print("destfile: "+ args.destfile+".webm")
+	print("destfile: "+ destfile)
 	print("resolution: "+ str(resolution))
 	print("fps: "+ str(fps))
 	print("bitrate: "+ bitrate)
@@ -74,6 +82,6 @@ if args.mute:
 	#print("no audio")
 	vo = vo.without_audio()
 
-vo.write_videofile(destfile+".webm",fps=fps, bitrate=bitrate)
+vo.write_videofile(destfile,fps=fps, bitrate=bitrate)
 
 ############################################################
