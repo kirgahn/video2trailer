@@ -23,4 +23,12 @@ echo "cleaning temp files.."
 rm _tmp*
 
 echo "done! output file is " "$1".jpeg
+echo "Press (q) to quit, (v) to view the file"
+read -n 1 -s viewfile
 
+if [ "$viewfile" == "v" ];
+	then
+		feh "$1".jpeg
+fi
+
+exit 1
