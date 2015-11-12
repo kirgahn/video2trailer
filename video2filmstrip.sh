@@ -7,7 +7,7 @@ then
 	shift $((OPTIND-1))
 fi
 
-tot_frames=30
+tot_frames=24
 percentage=`echo 100/$tot_frames|bc`
 progress=0
 framelist=""
@@ -52,7 +52,7 @@ done;
 		echo "done, let's join those images!"
 	fi
 
-montage  -tile 5 -geometry +0+0  $framelist "$1".jpeg
+montage  -tile 6 -geometry +0+0  $framelist "$1".jpeg
 
 	if [ "$quiet" != "true"  ];
 	then
