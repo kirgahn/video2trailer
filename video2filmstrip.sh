@@ -7,7 +7,7 @@ then
 	shift $((OPTIND-1))
 fi
 
-tot_frames=20
+tot_frames=30
 percentage=`echo 100/$tot_frames|bc`
 progress=0
 framelist=""
@@ -15,7 +15,7 @@ progressbar=""
 
 duration_float=`ffprobe -i "$1" -show_format -v quiet | sed -n 's/duration=//p'`
 duration=`echo "scale=2;$duration_float"|bc`
-timegap=`echo "scale=2;$duration/20;"|bc`
+timegap=`echo "scale=2;$duration/$tot_frames;"|bc`
 
 if [ "$quiet" != "true"  ];
 then
