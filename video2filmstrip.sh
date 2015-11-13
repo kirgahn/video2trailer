@@ -1,11 +1,22 @@
 #!/bin/bash
 # requires ffmpeg and imagemagick!
+
+############################################
+## Reads $1 and checks if there's "-q",   ##
+## if so shift on the next parameter/arg  ##
+############################################
+
 getopts "q" opt
 if [ "$opt" == "q" ];
 then
 	quiet=true
 	shift $((OPTIND-1))
 fi
+
+############################################
+## initialize variables and get duration  ##
+## time in secs. tell something about it  ##
+############################################
 
 tot_frames=24
 percentage=`echo 100/$tot_frames|bc`
@@ -23,6 +34,14 @@ then
 	echo "time gap between snapshots:" `date -u -d @${timegap} +"%T"`
 fi
 
+################################################
+## Generate a range as a sequence and loop.   ##
+## Time gaps are defined as int of 	      ##
+## duration/frames. Each frame will be        ##
+## extracted at timegap*$i, except for the    ##
+## first.                                     ##
+################################################
+
 for i in $(seq 0 `echo $tot_frames-1|bc`);
 do
 	if [ "$i" == "0" ];
@@ -33,6 +52,16 @@ do
 
 	fi
 	ffmpeg -v 0 -ss $frametime -y -i "$1" -t 1 -s 320x240 -f image2 _tmp$i.jpg; 
+
+################################################
+## Convert time to an understandable format   ##
+## and stamp it on the frames. Do it twice    ##
+## for black and white text.                  ##
+## Show some progress.         		      ##
+## extracted at timegap*$i, except for the    ##
+## first.                                     ##
+################################################
+
 	frametimehours=`date -u -d @${frametime} +"%T"`
 	progress=`echo $progress+$percentage|bc`
 	progressbar=$progressbar##
@@ -51,6 +80,12 @@ done;
 		echo -ne '\n'
 		echo "done, let's join those images!"
 	fi
+
+################################################
+## Create picture tile. 		      ##
+## Remove temporary files.                    ##
+## Offer to show results.                     ##
+################################################
 
 montage  -tile 6 -geometry +0+0  $framelist "$1".jpeg
 
