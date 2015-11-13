@@ -64,19 +64,25 @@ do
 
 	frametimehours=`date -u -d @${frametime} +"%T"`
 	progress=`echo $progress+$percentage|bc`
-	progressbar=$progressbar##
+
+	for hastag in $percentage;
+	do
+		progressbar=$progressbar#
+	done;
+
 	framelist=$framelist" _tmp$i.jpg"
 	convert _tmp$i.jpg -fill black -gravity Southeast -pointsize 14 -annotate +0+0 $frametimehours _tmp$i.jpg
 	convert _tmp$i.jpg -fill white -gravity Southeast -pointsize 14 -annotate +1+1 $frametimehours _tmp$i.jpg
 
 	if [ "$quiet" != "true"  ];
 	then
-		echo -ne 'extracting frame at time '$frametimehours' ('$progress'%)' $progressbar' \r'
+		echo -ne 'extracting frame at '$frametimehours' ('$progress'%)' $progressbar' \r'
 	fi
 done; 
 
 	if [ "$quiet" != "true"  ];
 	then
+		echo -ne 'done extracting frames      (100%)' $progressbar' \r'
 		echo -ne '\n'
 		echo "done, let's join those images!"
 	fi
