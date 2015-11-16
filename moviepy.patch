@@ -1,0 +1,5 @@
+# replaces .tostring() with .tobyte() in moviepy for python3.5
+sudo sed -i 's/\.tostring()/.tobytes()/g' /lib/python3.5/site-packages/moviepy/video/fx/resize.py --in-place=.bckp
+sudo sed -i 's/\.tostring()/.tobytes()/g' /lib/python3.5/site-packages/moviepy/video/io/gif_writers.py --in-place=.bckp
+sudo sed -i 's/\.tostring()/.tobytes()/g' /lib/python3.5/site-packages/moviepy/video/io/ffmpeg_writer.py --in-place=.bckp
+sudo sed -i 's/\.tostring()/.tobytes()/g' /lib/python3.5/site-packages/moviepy/audio/io/ffmpeg_audiowriter.py --in-place=.bckp
