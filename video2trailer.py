@@ -78,10 +78,11 @@ s=1
 n=1
 
 while n <= cycles:
+	s = random.randint(prevpos+1,round(int(v.duration)/100*(n*step)))
 	if args.verbose:
 		print ("slices:", len(slices), "step:", step, "n counter:", n, "slice position:", s, "previous position:", prevpos, "duration:", int(v.duration), "percentage",str(round(s/int(v.duration)*100))+"%" )
 
-	s = random.randint(prevpos+1,round(int(v.duration)/100*(n*step)))
+
 	prevpos = s
 	vo = v.subclip(s,s+sliceduration)
 	vo = vo.resize(width=width)
