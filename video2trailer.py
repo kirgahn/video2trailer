@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# incremental version 0.3.1
 
 import random
 import datetime
@@ -80,8 +79,8 @@ n=1
 while n <= cycles:
 	s = random.randint(prevpos+1,round(int(v.duration)/100*(n*step)))
 	if args.verbose:
-		print ("slices:", len(slices), "step:", step, "n counter:", n, "slice position:", s, "previous position:", prevpos, "duration:", int(v.duration), "percentage",str(round(s/int(v.duration)*100))+"%" )
-
+		print ("slice:", len(slices), "|| slice position:", s, "|| previous position:", prevpos, "|| duration:", int(v.duration), "|| percentage",str(round(s/int(v.duration)*100))+"%" )
+		#print ("slice:", len(slices), "step:", step, "n counter:", n, "slice position:", s, "previous position:", prevpos, "duration:", int(v.duration), "percentage",str(round(s/int(v.duration)*100))+"%" )
 
 	prevpos = s
 	vo = v.subclip(s,s+sliceduration)
@@ -97,7 +96,7 @@ if args.verbose:
 	print ("last slice position:", s)			
 
 vo = v.subclip(s,s+sliceduration)
-vo = vo.resize(width=720)
+vo = vo.resize(width=width)
 slices.append(vo)
 
 concatenate_videoclips(slices,method='compose').write_videofile(destfile, bitrate=bitrate, fps=fps)
