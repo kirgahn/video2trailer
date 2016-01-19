@@ -71,8 +71,8 @@ do
 	done;
 
 	framelist=$framelist" _tmp$i.jpg"
-	convert _tmp$i.jpg -fill black -gravity Southeast -pointsize 14 -annotate +0+0 $frametimehours _tmp$i.jpg
-	convert _tmp$i.jpg -fill white -gravity Southeast -pointsize 14 -annotate +1+1 $frametimehours _tmp$i.jpg
+	convert _tmp$i.jpg -fill black -gravity Southwest -pointsize 14 -annotate +0+0 $frametimehours _tmp$i.jpg
+	convert _tmp$i.jpg -fill white -gravity Southwest -pointsize 14 -annotate +1+1 $frametimehours _tmp$i.jpg
 
 	if [ "$quiet" != "true"  ];
 	then
