@@ -99,7 +99,7 @@ s = random.randint(prevpos,int(v.duration))
 prevpos = s
 
 if args.verbose:
-	print ("last slice position:", s)			
+	print ("\nlast slice position:", s)			
 
 vo = v.subclip(s,s+sliceduration)
 vo = vo.resize(width=width)
