@@ -4,6 +4,7 @@ import random
 import datetime
 import mimetypes
 import os
+import sys
 import argparse
 from moviepy.editor import *
 
@@ -35,6 +36,10 @@ if not args.duration:
 	duration=30
 else:
 	duration=args.duration
+
+if args.verbose:
+	print(("#" * 12) + " video2trailer " + ("#" * 12))
+	print("source file: " + sourcefile + " - destination file: " + destfile)
 
 if not args.fps:
         fps=int(v.fps)
@@ -79,8 +84,9 @@ n=1
 while n <= cycles:
 	s = random.randint(prevpos+1,round(int(v.duration)/100*(n*step)))
 	if args.verbose:
-		print ("slice:", len(slices), "|| slice position:", s, "|| previous position:", prevpos, "|| duration:", int(v.duration), "|| percentage",str(round(s/int(v.duration)*100))+"%" )
-		#print ("slice:", len(slices), "step:", step, "n counter:", n, "slice position:", s, "previous position:", prevpos, "duration:", int(v.duration), "percentage",str(round(s/int(v.duration)*100))+"%" )
+		#print ("slice:", len(slices), "|| slice position:", s, "|| previous position:", prevpos, "|| duration:", int(v.duration), "|| percentage",str(round(s/int(v.duration)*100))+"%" )
+		sys.stdout.write("\r" + "generating slices -- slice:" + str(len(slices)) + " || slice position:" + str(s) + " || previous position:" + str(prevpos) + " || duration:" + str(int(v.duration)) + " || percentage " + str(round(s/int(v.duration)*100))+"%" )
+		sys.stdout.flush()
 
 	prevpos = s
 	vo = v.subclip(s,s+sliceduration)
