@@ -99,7 +99,9 @@ s = random.randint(prevpos,int(v.duration))
 prevpos = s
 
 if args.verbose:
-	print ("\nlast slice position:", s)			
+	#print ("\nlast slice position:", s)			
+	sys.stdout.write("\r" + "generating slices -- slice:" + str(len(slices)) + " || slice position:" + str(s) + " || previous position:" + str(prevpos) + " || duration:" + str(int(v.duration)) + " || percentage 100%" )
+	sys.stdout.write("\n")
 
 vo = v.subclip(s,s+sliceduration)
 vo = vo.resize(width=width)
