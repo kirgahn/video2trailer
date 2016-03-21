@@ -100,7 +100,11 @@ while n <= cycles and ((int(prevpos))+sliceduration < int(v.duration)):
 
 # add last slice between prevpos + slice duration & total lenght - slice duration if possible
 if finalslice and ((prevpos + sliceduration) < (int(v.duration)-sliceduration)):
+	# generates last slice - if it ends after the actual video ending just keep recalculating since prevpos + sliceduration < v.duration
 	s = random.randint(prevpos + sliceduration,(int(v.duration)-sliceduration))
+	while (s + sliceduration) > int(v.duration):
+		s = random.randint(prevpos + sliceduration,(int(v.duration)-sliceduration))
+
 	prevpos = s
 
 	if args.verbose:
