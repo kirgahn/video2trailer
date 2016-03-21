@@ -70,12 +70,14 @@ else:
 
 if args.verbose:
 	print("Configuration parameters")
+	print("-" * 24)
 	print("Slice duration: "+str(sliceduration))
 	print("Webm duration: "+str(duration))
 	print("fps: "+ str(fps))
 	print("width: "+ str(width))
 	print("bitrate: "+ bitrate)
 	print("Additional ending slice: " + str(finalslice))
+	print("-" * 24)
 
 slices = []
 prevpos = 0
@@ -99,11 +101,11 @@ while n <= cycles and ((int(prevpos))+sliceduration < int(v.duration)):
 	n = n + 1
 
 # add last slice between prevpos + slice duration & total lenght - slice duration if possible
-if finalslice and ((prevpos + sliceduration) < (int(v.duration)-sliceduration)):
+if finalslice and ((prevpos + sliceduration) <= (int(v.duration)-sliceduration)):
 	# generates last slice - if it ends after the actual video ending just keep recalculating since prevpos + sliceduration < v.duration
 	s = random.randint(prevpos + sliceduration,(int(v.duration)-sliceduration))
-	while (s + sliceduration) > int(v.duration-sliceduration):
-		s = random.randint(prevpos + sliceduration,(int(v.duration)-sliceduration))
+	#while s > int(v.duration-sliceduration):
+	#	s = random.randint(prevpos + sliceduration,(int(v.duration)-sliceduration))
 
 	prevpos = s
 
