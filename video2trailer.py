@@ -8,6 +8,7 @@ import sys
 import argparse
 from moviepy.editor import *
 
+## Parse args
 parser = argparse.ArgumentParser()
 parser.add_argument("sourcefile", help="Source video file", type=str)
 parser.add_argument("-v", "--verbose", help="Print additional info", action="store_true" )
@@ -23,6 +24,7 @@ args = parser.parse_args()
 sourcefile = args.sourcefile
 v = VideoFileClip(sourcefile)
 
+## Set default values whereas no argument was given
 if not args.destfile:
 	destfile=str(args.sourcefile)+'_trailer.webm'
 else:
@@ -38,28 +40,18 @@ if not args.duration:
 else:
 	duration=args.duration
 
-if args.verbose:
-	print(("#" * 12) + " video2trailer " + ("#" * 12))
-	print("source file: " + sourcefile + " - destination file: " + destfile)
-
 if not args.fps:
         fps=int(v.fps)
-        if args.verbose:
-                print("Assuming FPS: " + str(v.fps))
 else:
 	fps=args.fps
 
 if not args.width:
         width=640
-        if args.verbose:
-                print("Assuming bitrate: " + str(width))
 else:
         width=args.width
 
 if not args.bitrate:
         bitrate="1.2M"
-        if args.verbose:
-                print("Assuming bitrate: " + bitrate)
 else:
         bitrate=str(args.bitrate)+"M"
 
@@ -68,17 +60,26 @@ if not args.finalslice:
 else:
         finalslice=True
 
+## If verbose mode on, print info
 if args.verbose:
+	print(("#" * 12) + " video2trailer " + ("#" * 12))
+	print("source file: " + sourcefile + " - destination file: " + destfile)
 	print("Configuration parameters")
 	print("-" * 24)
 	print("Slice duration: "+str(sliceduration))
-	print("Webm duration: "+str(duration))
+
+	if not finalslice:
+		print("Webm duration: "+str(duration)+" secs")
+	else:
+		print("Webm duration: "+str(duration + sliceduration)+" secs")
+
 	print("fps: "+ str(fps))
 	print("width: "+ str(width))
 	print("bitrate: "+ bitrate)
 	print("Additional ending slice: " + str(finalslice))
 	print("-" * 24)
 
+## Initialize some variables - "steps" are slices position in percentage, where the overall source lenght is 100%
 slices = []
 prevpos = 0
 cycles = duration/sliceduration
@@ -86,11 +87,15 @@ step = 100/cycles
 s=1
 n=1
 
+## One loop for each cycle IF the next estimated slice position doesn't end after the overall clip duration.
+## If that happens, MoviePy will complain and quit, leaving temp files behind.
+## stdout.write and stdout.flush are used with \r (return at the beginning of the line) to write info on the
+## same line. 
+## vo (video out) is composed of source video subclips defined by the randomized  start of a slice (s) plus
+## the defined slice duration.
 while n <= cycles and ((int(prevpos))+sliceduration < int(v.duration)):
-	#s = random.randint(prevpos+1,round(int(v.duration)/100*(n*step)))
 	s = random.randint(prevpos+sliceduration,round(int(v.duration)/100*(n*step)))
 	if args.verbose:
-		#print ("slice:", len(slices), "|| slice position:", s, "|| previous position:", prevpos, "|| duration:", int(v.duration), "|| percentage",str(round(s/int(v.duration)*100))+" % " )
 		sys.stdout.write("\r" + "generating slices -- slice:" + str(len(slices)) + " || slice position:" + str(s) + " || previous position:" + str(prevpos) + " || duration:" + str(v.duration) + " || percentage " + str(round(s/int(v.duration)*100))+"%" )
 		sys.stdout.flush()
 
@@ -100,17 +105,13 @@ while n <= cycles and ((int(prevpos))+sliceduration < int(v.duration)):
 	slices.append(vo)
 	n = n + 1
 
-# add last slice between prevpos + slice duration & total lenght - slice duration if possible
+## Add last slice between the (previous postion + slice duration) & (total lenght - slice duration). 
+## If that isn't possible becuse the slice would end after the source file ending then just skip the 
+## thing altogether. If that happens, the logged "percentage" never reaches 100%. 
+## Also, stdout.write a newline (\n) to avoid MoviePy messages be appended to the previous line.
 if finalslice and ((prevpos + sliceduration) <= (int(v.duration)-sliceduration)):
-	# generates last slice - if it ends after the actual video ending just keep recalculating since prevpos + sliceduration < v.duration
 	s = random.randint(prevpos + sliceduration,(int(v.duration)-sliceduration))
-	#while s > int(v.duration-sliceduration):
-	#	s = random.randint(prevpos + sliceduration,(int(v.duration)-sliceduration))
-
-	prevpos = s
-
 	if args.verbose:
-		#print ("\nlast slice position:", s)			
 		sys.stdout.write("\r" + "generating slices -- slice:" + str(len(slices)) + " || slice position:" + str(s) + " || previous position:" + str(prevpos) + " || duration:" + str(v.duration) + " || percentage 100%" )
 		sys.stdout.write("\n")
 	
@@ -120,4 +121,5 @@ if finalslice and ((prevpos + sliceduration) <= (int(v.duration)-sliceduration))
 else:
 	sys.stdout.write("\n")
 
+## Tell MoviePy to concatenate the selected subclips that are in the slices[] array.
 concatenate_videoclips(slices,method='compose').write_videofile(destfile, bitrate=bitrate, fps=fps)
