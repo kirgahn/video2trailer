@@ -70,8 +70,6 @@ else:
 
 if args.verbose:
 	print("Configuration parameters")
-	print("Source file: "+sourcefile)
-	print("Destination file: "+destfile)
 	print("Slice duration: "+str(sliceduration))
 	print("Webm duration: "+str(duration))
 	print("fps: "+ str(fps))
