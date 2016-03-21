@@ -17,6 +17,7 @@ parser.add_argument("-d", "--destfile", help="Destination video file, if unspeci
 parser.add_argument("-f", "--fps", help="Output videofile frames per second, if empty assumes source fps", type=int)
 parser.add_argument("-w", "--width", help="Resolution width of the output file in pixels, if empty assumes 640", type=int)
 parser.add_argument("-b", "--bitrate", help="Output videofile bitrate in \"x.x\" format, if empty assumes \"1.2M\"", type=float)
+parser.add_argument("-fs", "--finalslice", help="Additional final slice, good if you need to catch the last seconds; if empty assume no ", action="store_true" )
 
 args = parser.parse_args()
 sourcefile = args.sourcefile
@@ -62,6 +63,10 @@ if not args.bitrate:
 else:
         bitrate=str(args.bitrate)+"M"
 
+if not args.finalslice:
+        finalslice=False
+else:
+        finalslice=True
 
 if args.verbose:
 	print("Configuration parameters")
@@ -72,7 +77,7 @@ if args.verbose:
 	print("fps: "+ str(fps))
 	print("width: "+ str(width))
 	print("bitrate: "+ bitrate)
-
+	print("Additional ending slice: " + str(finalslice))
 
 slices = []
 prevpos = 0
@@ -81,11 +86,12 @@ step = 100/cycles
 s=1
 n=1
 
-while n <= cycles:
-	s = random.randint(prevpos+1,round(int(v.duration)/100*(n*step)))
+while n <= cycles and ((int(prevpos))+sliceduration < int(v.duration)):
+	#s = random.randint(prevpos+1,round(int(v.duration)/100*(n*step)))
+	s = random.randint(prevpos+sliceduration,round(int(v.duration)/100*(n*step)))
 	if args.verbose:
 		#print ("slice:", len(slices), "|| slice position:", s, "|| previous position:", prevpos, "|| duration:", int(v.duration), "|| percentage",str(round(s/int(v.duration)*100))+" % " )
-		sys.stdout.write("\r" + "generating slices -- slice:" + str(len(slices)) + " || slice position:" + str(s) + " || previous position:" + str(prevpos) + " || duration:" + str(int(v.duration)) + " || percentage " + str(round(s/int(v.duration)*100))+"%" )
+		sys.stdout.write("\r" + "generating slices -- slice:" + str(len(slices)) + " || slice position:" + str(s) + " || previous position:" + str(prevpos) + " || duration:" + str(v.duration) + " || percentage " + str(round(s/int(v.duration)*100))+"%" )
 		sys.stdout.flush()
 
 	prevpos = s
@@ -94,17 +100,20 @@ while n <= cycles:
 	slices.append(vo)
 	n = n + 1
 
-#last slice between lastpos & total lenght
-s = random.randint(prevpos,int(v.duration))
-prevpos = s
+# add last slice between prevpos + slice duration & total lenght - slice duration if possible
+if finalslice and ((prevpos + sliceduration) < (int(v.duration)-sliceduration)):
+	s = random.randint(prevpos + sliceduration,(int(v.duration)-sliceduration))
+	prevpos = s
 
-if args.verbose:
-	#print ("\nlast slice position:", s)			
-	sys.stdout.write("\r" + "generating slices -- slice:" + str(len(slices)) + " || slice position:" + str(s) + " || previous position:" + str(prevpos) + " || duration:" + str(int(v.duration)) + " || percentage 100%" )
+	if args.verbose:
+		#print ("\nlast slice position:", s)			
+		sys.stdout.write("\r" + "generating slices -- slice:" + str(len(slices)) + " || slice position:" + str(s) + " || previous position:" + str(prevpos) + " || duration:" + str(v.duration) + " || percentage 100%" )
+		sys.stdout.write("\n")
+	
+	vo = v.subclip(s,s+sliceduration)
+	vo = vo.resize(width=width)
+	slices.append(vo)
+else:
 	sys.stdout.write("\n")
-
-vo = v.subclip(s,s+sliceduration)
-vo = vo.resize(width=width)
-slices.append(vo)
 
 concatenate_videoclips(slices,method='compose').write_videofile(destfile, bitrate=bitrate, fps=fps)

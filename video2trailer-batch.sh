@@ -7,7 +7,6 @@ width=800
 
 for source in "$@";
 do
-	/usr/local/bin/video2trailer -v -s $sliceduration -dt $clipduration -w $width "$source";
+	/usr/local/bin/video2trailer -v -s $sliceduration -dt $clipduration -w $width -fs "$source";
 done
-
 exit 0
