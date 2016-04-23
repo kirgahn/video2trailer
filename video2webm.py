@@ -13,10 +13,10 @@ parser.add_argument("-v", "--verbose", help="Print additional info", action="sto
 parser.add_argument("-s", "--starttime", help="Begin to cut video file at this time given a \"00:00:00\" time format. If empty assume \"00:00:00\"", type=str)
 parser.add_argument("-e", "--endtime", help="Cut video file from starttime to this time given a \"00:00:00\" time format. If empty assume video ending", type=str)
 parser.add_argument("-r", "--resolution", help="Output videofile width in pixels, if empty assumes 720", type=int) 
-parser.add_argument("-f", "--fps", help="Output videofile frames per second, if empty assumes 15 fps", type=int)
+parser.add_argument("-f", "--fps", help="Output videofile frames per second, if empty assumes 21 fps", type=int)
 parser.add_argument("-b", "--bitrate", help="Output videofile bitrate in \"x.x\" format, if empty assumes \"0.5M\"", type=float)
 parser.add_argument("-m", "--mute", help="Removes audio from videoclip, if not specified keeps audio", action="store_true")
-parser.add_argument("-d", "--destinationfile", help="Destination file, if unspecified assumes \"filename.webm\"", type=str)
+parser.add_argument("-o", "--output", help="Destination file, if unspecified assumes \"filename.webm\"", type=str)
 
 args = parser.parse_args()
 
@@ -46,7 +46,7 @@ if not args.resolution:
 		print("Assuming resolution width of: " + str(resolution))
 
 if not args.fps:
-	fps=int(15)
+	fps=int(21)
 	if args.verbose:
 		print("Assuming FPS: " + str(fps))
 else:
@@ -60,10 +60,10 @@ if not args.bitrate:
 else:
 	bitrate=str(args.bitrate)+"M"
 
-if not args.destinationfile:
+if not args.output:
 	destfile=sourcefile + ".webm"
 	if args.verbose:
-		print("Assuming destination file: " + destfile)
+		print("Assuming output file: " + destfile)
 else:
 	destfile=args.destinationfile
 
