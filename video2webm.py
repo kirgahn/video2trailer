@@ -65,7 +65,7 @@ if not args.output:
 	if args.verbose:
 		print("Assuming output file: " + destfile)
 else:
-	destfile=args.destinationfile
+	destfile=args.output
 
 if args.verbose:
 	print("sourcefile: "+ sourcefile)
