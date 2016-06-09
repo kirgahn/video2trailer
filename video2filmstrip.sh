@@ -110,7 +110,8 @@ rm _tmp*
 		
 		if [ "$viewfile" == "v" ];
 			then
-				feh -F "$1".jpeg
+				#feh -F "$1".jpeg
+				xdg-open "$1".jpeg &>/dev/null
 		fi
 	fi
 
