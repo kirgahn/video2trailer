@@ -24,7 +24,6 @@ args = parser.parse_args()
 sourcefile = args.sourcefile
 v = VideoFileClip(sourcefile)
 
-
 ## Set default values whereas no argument was given
 if not args.destfile:
         destfile=str(args.sourcefile)+'_trailer.webm'
@@ -45,6 +44,33 @@ if not args.bitrate:
         bitrate="1.2M"
 else:
         bitrate=str(args.bitrate)+"M"
+
+def show_info(sourcefile, destfile, fps, width, bitrate):
+		os.system('cls||clear')
+		print(("#" * 12) + " video2trailer " + ("#" * 12))
+		print("")
+		print("source file: " + sourcefile )
+		print("destination file: " + destfile)
+		#print("Configuration parameters")
+		print("-" * 24)
+		print("fps: "+ str(fps))
+		print("width: "+ str(width))
+		print("bitrate: "+ bitrate)
+		#print("-" * 24)
+		print("")
+		input("press ENTER go back to the pevious menu")
+
+def video2filmstrip(sourcefile):
+	os.system("video2filmstrip" + " " + sourcefile)
+
+def xdg_open(sourcefile):
+	os.system("xdg-open" + " " + sourcefile + "&> /dev/null &")
+
+#	exec(open("/usr/local/bin/video2filmstrip" + " " + sourcefile).read())
+
+#	with open("/usr/local/bin/video2filmstrip") as f:
+#	    code = compile(f.read(), "/usr/local/bin/video2filmstrip.py", 'exec')
+#	    exec(code, global_vars, local_vars)
 
 ## if no argument is given, ask about it and offer a default value 
 #if not args.destfile:
@@ -100,49 +126,50 @@ quit_loop=False
 slices = []
 
 while not quit_loop:
+	try:
 	## let's clear the screen at first
-	os.system('cls||clear')
-	
-	print(("#" * 12) + " video2trailer " + ("#" * 12))
-#	print("")
-#	print ("\"" + sourcefile + "\"")
-#	print("")
-#	print("=" * 39)
-	print("")
-	print("1) Add a new subclip")
-	print("2) Discard last subclip")
-	print("3) Write destination file")
-	print("4) Show output video info")
-	print("5) Quit")
-	print("")
-	print("=" * 39)
-	
-	choice=input("# ")
-
-	if choice == "1":
-		slice_start = input("enter start time for subclip number " + str(subclip_num) + ": ")
-		slice_end = input("enter end time for subclip number " + str(subclip_num) + ": ")
-	elif choice == "2":
-		print("STUB")
-	elif choice == "3":
-		print("STUB")
-	elif choice == "4":
 		os.system('cls||clear')
-		print(("#" * 12) + " video2trailer " + ("#" * 12))
+	
+		## Main Menu
+		print(("=" * 12) + "<|| video2trailer ||> " + ("=" * 12))
+		#print("")
+		#print ("\"" + sourcefile + "\"")
+		#print("")
+		#print("=" * 39)
 		print("")
-		print("source file: " + sourcefile )
-		print("destination file: " + destfile)
-		#print("Configuration parameters")
-		print("-" * 24)
-		print("fps: "+ str(fps))
-		print("width: "+ str(width))
-		print("bitrate: "+ bitrate)
-		#print("-" * 24)
+		print("1) Open with default media player")
+		print("2) Add a new subclip")
+		print("3) Discard last subclip")
+		print("4) Write destination file")
+		print("5) Show output video info")
+		print("6) Create a video filmstrip")
+		print("7) Quit")
 		print("")
-		input("press ENTER go back to the pevious menu")
-	elif choice == "5":
-		os.system('cls||clear')
-		quit_loop=True
+		print("=" * 39)
+		
+		choice=input("# ")
+		
+		if choice == "1":
+			xdg_open(sourcefile)
+		elif choice == "2":
+			slice_start = input("enter start time for subclip number " + str(subclip_num) + ": ")
+			slice_end = input("enter end time for subclip number " + str(subclip_num) + ": ")
+		elif choice == "3":
+			print("STUB")
+		elif choice == "4":
+			print("STUB")
+		elif choice == "5":
+			show_info(sourcefile, destfile, fps, width, bitrate)
+		elif choice == "6":
+			print("=" * 39)
+			video2filmstrip(sourcefile)
+		elif choice == "7" or choice == "Q" or choice == "q":
+			os.system('cls||clear')
+			quit_loop=True
+	except KeyboardInterrupt:
+			v = ""
+			os.system('cls||clear')
+			sys.exit()
 
 ## Initialize some variables - "steps" are slices position in percentage, where the overall source lenght is 100%
 #slices = []
