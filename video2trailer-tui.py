@@ -11,14 +11,11 @@ from moviepy.editor import *
 ## Parse args
 parser = argparse.ArgumentParser()
 parser.add_argument("sourcefile", help="Source video file", type=str)
-parser.add_argument("-v", "--verbose", help="Print additional info", action="store_true" )
-#parser.add_argument("-s", "--sliceduration", help="Duration of each slice in seconds, if unpecified assume one second", type=int)
-#parser.add_argument("-dt", "--duration", help="Total duration of output file, if unspecified assume 30 seconds", type=int)
+#parser.add_argument("-v", "--verbose", help="Print additional info", action="store_true" )
 parser.add_argument("-d", "--destfile", help="Destination video file, if unspecified append \"_trailer.webm\" to source filename", type=str)
 parser.add_argument("-f", "--fps", help="Output videofile frames per second, if empty assumes source fps", type=int)
 parser.add_argument("-w", "--width", help="Resolution width of the output file in pixels, if empty assumes 640", type=int)
 parser.add_argument("-b", "--bitrate", help="Output videofile bitrate in \"x.x\" format, if empty assumes \"1.2M\"", type=float)
-#parser.add_argument("-fs", "--finalslice", help="Additional final slice, good if you need to catch the last seconds; if empty assume no ", action="store_true" )
 
 args = parser.parse_args()
 sourcefile = args.sourcefile
@@ -62,7 +59,18 @@ def video2filmstrip(sourcefile):
 	os.system("video2filmstrip" + " " + sourcefile)
 
 def xdg_open(sourcefile):
-	os.system("xdg-open" + " " + sourcefile + "&> /dev/null &")
+	os.system("xdg-open" + " " + sourcefile + " &> /dev/null &")
+
+def convert_to_minutes(seconds):
+	
+	(m, s) = divmod(seconds, 60)
+	(h, m) = divmod(m, 60)
+	converted=str(h)+":"+str(m)+":"+str(s)
+	return  converted
+
+def convert_to_seconds(time):
+	converted = sum(int(x) * 60 ** i for i,x in enumerate(reversed(time.split(":"))))
+	return int(converted)
 
 def change_settings(destfile,fps,width,bitrate):
 	settings_loop=False
@@ -92,11 +100,11 @@ def change_settings(destfile,fps,width,bitrate):
 		elif settings_choice == "2":
 			new_fps = input("fps: ")
 			if new_fps:
-				fps=new_fps
+				fps=int(new_fps)
 		elif settings_choice == "3":
 			new_width = input("width: ")
 			if new_width:
-				width=new_width
+				width=int(new_width)
 		elif settings_choice == "4":
 			new_bitrate = input("bitrate: ")
 			if new_bitrate:
@@ -121,12 +129,6 @@ def generate_slices(video):
 	s=1
 	n=1
 	
-	## One loop for each cycle IF the next estimated slice position doesn't end after the overall clip duration.
-	## If that happens, MoviePy will complain and quit, leaving temp files behind.
-	## stdout.write and stdout.flush are used with \r (return at the beginning of the line) to write info on the
-	## same line. 
-	## vo (video out) is composed of source video subclips defined by the randomized  start of a slice (s) plus
-	## the defined slice duration.
 	while n <= cycles and ((int(prevpos))+sliceduration < int(video.duration)):
 		s = random.randint(prevpos+sliceduration,round(int(video.duration)/100*(n*step)))
 		#if args.verbose:
@@ -135,65 +137,95 @@ def generate_slices(video):
 	
 		prevpos = s
 		slices.append([s,s+sliceduration])
-		#vo = v.subclip(s,s+sliceduration)
-		#vo = vo.resize(width=width)
-		#slices.append(vo)
 		n = n + 1
 	return slices
 	
-	## Add last slice between the (previous postion + slice duration) & (total lenght - slice duration). 
-	## If that isn't possible becuse the slice would end after the source file ending then just skip the 
-	## thing altogether. If that happens, the logged "percentage" never reaches 100%. 
-	## Also, stdout.write a newline (\n) to avoid MoviePy messages be appended to the previous line.
-#	if finalslice and ((prevpos + sliceduration) <= (int(v.duration)-sliceduration)):
-#		s = random.randint(prevpos + sliceduration,(int(v.duration)-sliceduration))
-#		#if args.verbose:
-#		#	sys.stdout.write("\r" + "generating slices -- slice:" + str(len(slices)) + " || slice position:" + str(s) + " || previous position:" + str(prevpos) + " || duration:" + str(v.duration) + " || percentage 100%" )
-#		#	sys.stdout.write("\n")
-#		
-#		vo = v.subclip(s,s+sliceduration)
-#		vo = vo.resize(width=width)
-#		slices.append(vo)
-#	else:
-#		sys.stdout.write("\n")
+def print_slices(slices):
+	print("Selected slices:")
+	print("")
+	
 
+#	if len(slices)>10:
+#		columns=3
+#		for i in range(len(slices)):
+#			if 
+#			slices_list
+#	else:
+	for i in range(len(slices)):
+	        (ss,se)=slices[i]
+        	print("#" + str(i) + ") "  + convert_to_minutes(ss) + " - " + convert_to_minutes(se))
+		
+def add_slice(slices):
+	print("Please insert start time for the new subclip (hh:mm:ss)")
+	ss=input("#")
+
+	print("Please insert start time for the new subclip (hh:mm:ss)")
+	se=input("#")
+
+	slices.append([convert_to_seconds(ss),convert_to_seconds(se)])
+	return slices
+	
+def change_slice(slices):
+	print("Which slice would you like to change?")
+	change_index=int(input("#"))
+
+	print("Please insert start time for the new subclip (hh:mm:ss)")
+	ss=input("#")
+
+	print("Please insert start time for the new subclip (hh:mm:ss)")
+	se=input("#")
+
+	slices[change_index]=([convert_to_seconds(ss),convert_to_seconds(se)])
+	return slices
+
+def remove_slice(slices):
+	print("Which slice would you like to remove?")
+	change_index=int(input("#"))
+
+	slices.pop(change_index)
+	return slices
+		
 def slices_menu(video,slices):
 	slices_loop=False
 	while not slices_loop:
 		## Slices Menu
 		os.system('cls||clear')
 		print(("=" * 12) + "<|| video2trailer ||> " + ("=" * 12))
-		#print("")
-		#print ("\"" + sourcefile + "\"")
-		#print("")
-		#print("=" * 39)
 		print("")
 		print("1) Automagically generate slices")
 		print("2) Add slice")
 		print("3) Change slice")
 		print("4) Remove slice")
-		print("5) Show preview")
-		print("6) Back to main menu")
+		print("5) Remove all slices")
+		print("6) Show preview")
+		print("7) Back to main menu")
 		print("")
 		print("=" * 39)
 		
 		if slices:
-			print("Selected slices:")
-			print("")
-			
-			for i in range(len(slices)):
-			        (ss,se)=slices[i]
-			        print("#" + str(i) + " - "  + str(ss) + ":" + str(se))
+			print_slices(slices)
+
 
 		slices_choice=input("# ")
 
 		if slices_choice == "1":
 			slices = generate_slices(video)
-		#elif slices_choice == "2":
-		#elif slices_choice == "3":
-		#elif settings_choice == "4":
-		#elif settings_choice == "5":
-		elif slices_choice == "6":
+		elif slices_choice == "2":
+			slices = add_slice(slices)
+		elif slices_choice == "3":
+			slices = change_slice(slices)
+		elif slices_choice == "4":
+			slices = remove_slice(slices)
+		elif slices_choice  == "5":
+			slices = []
+		elif slices_choice  == "6":
+			tempfile=destfile+str(random.randint(0,1024))+".webm"
+			write_vo(video,slices,tempfile,12,240,"0.5M")
+			xdg_open(tempfile)
+			input("press enter to resume editing")
+			os.system("rm" + " " + tempfile)
+			
+		elif slices_choice == "7":
 			slices_loop=True
 	return slices
 
@@ -243,8 +275,6 @@ while not quit_loop:
 			print("=" * 39)
 			video2filmstrip(sourcefile)
 		elif choice == "3":
-			#slice_start = input("enter start time for subclip number " + str(subclip_num) + ": ")
-			#slice_end = input("enter end time for subclip number " + str(subclip_num) + ": ")
 			slices = slices_menu(video,slices)
 		elif choice == "4":
 			if slices:
@@ -259,7 +289,7 @@ while not quit_loop:
 			os.system('cls||clear')
 			quit_loop=True
 	except KeyboardInterrupt:
-			v = ""
+			video = ""
 			os.system('cls||clear')
 			sys.exit()
 
