@@ -22,7 +22,7 @@ parser.add_argument("-b", "--bitrate", help="Output videofile bitrate in \"x.x\"
 
 args = parser.parse_args()
 sourcefile = args.sourcefile
-v = VideoFileClip(sourcefile)
+video = VideoFileClip(sourcefile)
 
 ## Set default values whereas no argument was given
 if not args.destfile:
@@ -30,7 +30,7 @@ if not args.destfile:
 else:
         destfile=args.destfile
 if not args.fps:
-        fps=int(v.fps)
+        fps=int(video.fps)
 else:
         fps=args.fps
 if not args.width:
@@ -105,9 +105,16 @@ def change_settings(destfile,fps,width,bitrate):
 			settings_loop=True
 	return (destfile,fps,width,bitrate)
 
-def generate_slices():
+def generate_slices(video):
 	# Initialize some variables - "steps" are slices position in percentage, where the overall source lenght is 100%
 	slices = []
+	
+	print("Please select the overall duration for the clip in seconds")
+	duration=int(input("# "))
+
+	print("Please select the duration for each slice in seconds")
+	sliceduration=int(input("# "))
+
 	prevpos = 0
 	cycles = duration/sliceduration
 	step = 100/cycles
@@ -120,35 +127,37 @@ def generate_slices():
 	## same line. 
 	## vo (video out) is composed of source video subclips defined by the randomized  start of a slice (s) plus
 	## the defined slice duration.
-	while n <= cycles and ((int(prevpos))+sliceduration < int(v.duration)):
-		s = random.randint(prevpos+sliceduration,round(int(v.duration)/100*(n*step)))
-		if args.verbose:
-			sys.stdout.write("\r" + "generating slices -- slice:" + str(len(slices)) + " || slice position:" + str(s) + " || previous position:" + str(prevpos) + " || duration:" + str(v.duration) + " || percentage " + str(round(s/int(v.duration)*100))+"%" )
-			sys.stdout.flush()
+	while n <= cycles and ((int(prevpos))+sliceduration < int(video.duration)):
+		s = random.randint(prevpos+sliceduration,round(int(video.duration)/100*(n*step)))
+		#if args.verbose:
+		#	sys.stdout.write("\r" + "generating slices -- slice:" + str(len(slices)) + " || slice position:" + str(s) + " || previous position:" + str(prevpos) + " || duration:" + str(v.duration) + " || percentage " + str(round(s/int(v.duration)*100))+"%" )
+		#	sys.stdout.flush()
 	
 		prevpos = s
-		vo = v.subclip(s,s+sliceduration)
-		vo = vo.resize(width=width)
-		slices.append(vo)
+		slices.append([s,s+sliceduration])
+		#vo = v.subclip(s,s+sliceduration)
+		#vo = vo.resize(width=width)
+		#slices.append(vo)
 		n = n + 1
+	return slices
 	
 	## Add last slice between the (previous postion + slice duration) & (total lenght - slice duration). 
 	## If that isn't possible becuse the slice would end after the source file ending then just skip the 
 	## thing altogether. If that happens, the logged "percentage" never reaches 100%. 
 	## Also, stdout.write a newline (\n) to avoid MoviePy messages be appended to the previous line.
-	if finalslice and ((prevpos + sliceduration) <= (int(v.duration)-sliceduration)):
-		s = random.randint(prevpos + sliceduration,(int(v.duration)-sliceduration))
-		if args.verbose:
-			sys.stdout.write("\r" + "generating slices -- slice:" + str(len(slices)) + " || slice position:" + str(s) + " || previous position:" + str(prevpos) + " || duration:" + str(v.duration) + " || percentage 100%" )
-			sys.stdout.write("\n")
-		
-		vo = v.subclip(s,s+sliceduration)
-		vo = vo.resize(width=width)
-		slices.append(vo)
-	else:
-		sys.stdout.write("\n")
+#	if finalslice and ((prevpos + sliceduration) <= (int(v.duration)-sliceduration)):
+#		s = random.randint(prevpos + sliceduration,(int(v.duration)-sliceduration))
+#		#if args.verbose:
+#		#	sys.stdout.write("\r" + "generating slices -- slice:" + str(len(slices)) + " || slice position:" + str(s) + " || previous position:" + str(prevpos) + " || duration:" + str(v.duration) + " || percentage 100%" )
+#		#	sys.stdout.write("\n")
+#		
+#		vo = v.subclip(s,s+sliceduration)
+#		vo = vo.resize(width=width)
+#		slices.append(vo)
+#	else:
+#		sys.stdout.write("\n")
 
-def slices_menu(slices):
+def slices_menu(video,slices):
 	slices_loop=False
 	while not slices_loop:
 		## Slices Menu
@@ -172,20 +181,36 @@ def slices_menu(slices):
 			print("Selected slices:")
 			print("")
 			
-			#i = 0
-			#for i in len(slices):
-				#print("#" + str(i) + ": " slices[i]
+			for i in range(len(slices)):
+			        (ss,se)=slices[i]
+			        print("#" + str(i) + " - "  + str(ss) + ":" + str(se))
 
-		#slices_choice=input("# ")
+		slices_choice=input("# ")
 
-		#if slices_choice == "1":
+		if slices_choice == "1":
+			slices = generate_slices(video)
 		#elif slices_choice == "2":
 		#elif slices_choice == "3":
 		#elif settings_choice == "4":
 		#elif settings_choice == "5":
-		#elif settings_choice == "6":
-			#slices_loop=True
-	return (destfile,fps,width,bitrate)
+		elif slices_choice == "6":
+			slices_loop=True
+	return slices
+
+def write_vo(video,slices,destfile,fps,width,bitrate):
+	vo_slices = []
+	for i in range(len(slices)):
+		(ss,se)=slices[i]
+		vo = video.subclip(ss,se)
+		vo = vo.resize(width=width)
+		vo_slices.append(vo)
+	
+	### Tell MoviePy to concatenate the selected subclips that are in the slices[] array.
+	concatenate_videoclips(vo_slices,method='compose').write_videofile(destfile, bitrate=bitrate, fps=fps)
+	vo = ""
+	
+	if input("Would you like to watch the output file (y/n)") == "y":
+		xdg_open(destfile)
 
 ## MAIN LOOP BEGINS HERE
 subclip_num=1
@@ -204,7 +229,7 @@ while not quit_loop:
 		print("2) Create a video filmstrip")
 		print("3) Edit clip")
 		print("4) Write destination file")
-		print("5) Show output video info")
+		print("5) STUB")
 		print("6) Change video settings")
 		print("7) Quit")
 		print("")
@@ -220,16 +245,17 @@ while not quit_loop:
 		elif choice == "3":
 			#slice_start = input("enter start time for subclip number " + str(subclip_num) + ": ")
 			#slice_end = input("enter end time for subclip number " + str(subclip_num) + ": ")
-			slices = slices_menu(slices)
+			slices = slices_menu(video,slices)
 		elif choice == "4":
-			print("STUB")
+			if slices:
+				write_vo(video,slices,destfile,fps,width,bitrate)
+			else:
+				print("no defined slices!")
 		elif choice == "5":
-			print("STUB")
-		elif choice == "6":
 			show_info(sourcefile, destfile, fps, width, bitrate)
-		elif choice == "7":
+		elif choice == "6":
 			(destfile,fps,width,bitrate) = change_settings(destfile,fps,width,bitrate)
-		elif choice == "8" or choice == "Q" or choice == "q":
+		elif choice == "7" or choice == "Q" or choice == "q":
 			os.system('cls||clear')
 			quit_loop=True
 	except KeyboardInterrupt:
@@ -238,5 +264,4 @@ while not quit_loop:
 			sys.exit()
 
 #
-### Tell MoviePy to concatenate the selected subclips that are in the slices[] array.
-#concatenate_videoclips(slices,method='compose').write_videofile(destfile, bitrate=bitrate, fps=fps)
+
