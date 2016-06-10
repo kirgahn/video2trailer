@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 
 import random
-import datetime
+from datetime import datetime, timedelta, time
 import mimetypes
 import os
 import sys
 import argparse
+import math
 from moviepy.editor import *
 
 ## Parse args
@@ -20,6 +21,7 @@ parser.add_argument("-b", "--bitrate", help="Output videofile bitrate in \"x.x\"
 args = parser.parse_args()
 sourcefile = args.sourcefile
 video = VideoFileClip(sourcefile)
+title = "|| video2trailer ||"
 
 ## Set default values whereas no argument was given
 if not args.destfile:
@@ -40,20 +42,20 @@ else:
         bitrate=str(args.bitrate)+"M"
 
 ## Define Functions
-def show_info(sourcefile, destfile, fps, width, bitrate):
-		os.system('cls||clear')
-		print(("#" * 12) + " video2trailer " + ("#" * 12))
-		print("")
-		print("source file: " + sourcefile )
-		print("destination file: " + destfile)
-		#print("Configuration parameters")
-		print("-" * 24)
-		print("fps: "+ str(fps))
-		print("width: "+ str(width))
-		print("bitrate: "+ bitrate)
-		#print("-" * 24)
-		print("")
-		input("press ENTER go back to the pevious menu")
+#def show_info(sourcefile, destfile, fps, width, bitrate):
+#		os.system('cls||clear')
+#		print(("#" * 12) + " video2trailer " + ("#" * 12))
+#		print("")
+#		print("source file: " + sourcefile )
+#		print("destination file: " + destfile)
+#		#print("Configuration parameters")
+#		print("-" * 24)
+#		print("fps: "+ str(fps))
+#		print("width: "+ str(width))
+#		print("bitrate: "+ bitrate)
+#		#print("-" * 24)
+#		print("")
+#		input("press ENTER go back to the pevious menu")
 
 def video2filmstrip(sourcefile):
 	os.system("video2filmstrip" + " " + sourcefile)
@@ -62,26 +64,35 @@ def xdg_open(sourcefile):
 	os.system("xdg-open" + " " + sourcefile + " &> /dev/null &")
 
 def convert_to_minutes(seconds):
-	
-	(m, s) = divmod(seconds, 60)
-	(h, m) = divmod(m, 60)
-	converted=str(h)+":"+str(m)+":"+str(s)
+	sec = timedelta(seconds=seconds)
+	converted = datetime(1,1,1) + sec
+	converted=converted.time()
 	return  converted
 
 def convert_to_seconds(time):
 	converted = sum(int(x) * 60 ** i for i,x in enumerate(reversed(time.split(":"))))
 	return int(converted)
 
+def terminal_size():
+	(columns,rows)=os.get_terminal_size()
+	return (columns,rows)
+
+def print_title():
+	## let's clear the screen at first
+	os.system('cls||clear')
+	(columns,rows)=terminal_size()
+	decorators=int((columns/2 - len(title)/2))
+	print(("=" * decorators) + title + ("=" * decorators))
+
+def print_separator():
+	(columns,rows)=terminal_size()
+	print("=" * columns)
+
 def change_settings(destfile,fps,width,bitrate):
 	settings_loop=False
 	while not settings_loop:
 		## Settings Menu
-		os.system('cls||clear')
-		print(("=" * 12) + "<|| video2trailer ||> " + ("=" * 12))
-		#print("")
-		#print ("\"" + sourcefile + "\"")
-		#print("")
-		#print("=" * 39)
+		print_title()
 		print("")
 		print("1) Change destination file (" + destfile + ")")
 		print("2) Change fps (" + str(fps) + ")")
@@ -89,7 +100,7 @@ def change_settings(destfile,fps,width,bitrate):
 		print("4) Change bitrate (" + bitrate + ")")
 		print("5) Back to main menu")
 		print("")
-		print("=" * 39)
+		print_separator()
 
 		settings_choice=input("# ")
 
@@ -141,19 +152,46 @@ def generate_slices(video):
 	return slices
 	
 def print_slices(slices):
+	(columns,rows)=os.get_terminal_size()
+	menu_rows=15
+	available_rows=int(rows)-menu_rows
+	slice_columns=math.ceil(len(slices)/available_rows)
+	slices_per_column=math.ceil(len(slices)/slice_columns)
+	separator=" "*5
+
 	print("Selected slices:")
 	print("")
 	
+	available_rows=int(rows)-menu_rows
+	slice_columns=math.ceil(len(slices)/available_rows)
+	slices_per_column=math.ceil(len(slices)/slice_columns)
+	separator="	"
+	
+#	print("slices: " + str(len(slices)))
+#	print("rows: " + str(rows))
+#	print("available rows: " + str(available_rows))
+#	print("chars per row: " + str(columns))
+#	print("number of pagination columns: " + str(slice_columns))
+#	print("number of slices per column: " + str(slices_per_column))
+	
+	print_str=""
+	print_out=[]
+	
+	for a in range(available_rows):
+		print_str=""
+		num=a
 
-#	if len(slices)>10:
-#		columns=3
-#		for i in range(len(slices)):
-#			if 
-#			slices_list
-#	else:
-	for i in range(len(slices)):
-	        (ss,se)=slices[i]
-        	print("#" + str(i) + ") "  + convert_to_minutes(ss) + " - " + convert_to_minutes(se))
+		for c in range(slice_columns):
+			if num < len(slices):
+				(ss,se)=slices[num]
+				print_str=print_str + "#" + str(num) + " " + str(convert_to_minutes(ss)) + " - " + str(convert_to_minutes(se)) + separator
+				num=num+(available_rows)
+		print_out.append(print_str)
+
+	for i in range(len(print_out)):
+		if i <= available_rows:
+			print(print_out[i])
+		
 		
 def add_slice(slices):
 	print("Please insert start time for the new subclip (hh:mm:ss)")
@@ -189,8 +227,7 @@ def slices_menu(video,slices):
 	slices_loop=False
 	while not slices_loop:
 		## Slices Menu
-		os.system('cls||clear')
-		print(("=" * 12) + "<|| video2trailer ||> " + ("=" * 12))
+		print_title()
 		print("")
 		print("1) Automagically generate slices")
 		print("2) Add slice")
@@ -200,7 +237,7 @@ def slices_menu(video,slices):
 		print("6) Show preview")
 		print("7) Back to main menu")
 		print("")
-		print("=" * 39)
+		print_separator()
 		
 		if slices:
 			print_slices(slices)
@@ -221,7 +258,6 @@ def slices_menu(video,slices):
 		elif slices_choice  == "6":
 			tempfile=destfile+str(random.randint(0,1024))+".webm"
 			write_vo(video,slices,tempfile,12,240,"0.5M")
-			xdg_open(tempfile)
 			input("press enter to resume editing")
 			os.system("rm" + " " + tempfile)
 			
@@ -251,21 +287,17 @@ slices = []
 
 while not quit_loop:
 	try:
-		## let's clear the screen at first
-		os.system('cls||clear')
-	
 		## Main Menu
-		print(("=" * 12) + "<|| video2trailer ||> " + ("=" * 12))
+		print_title()
 		print("")
 		print("1) Open with default media player")
 		print("2) Create a video filmstrip")
 		print("3) Edit clip")
 		print("4) Write destination file")
-		print("5) STUB")
-		print("6) Change video settings")
-		print("7) Quit")
+		print("5) Change settings")
+		print("6) Quit")
 		print("")
-		print("=" * 39)
+		print_separator()
 		
 		choice=input("# ")
 		
@@ -281,11 +313,11 @@ while not quit_loop:
 				write_vo(video,slices,destfile,fps,width,bitrate)
 			else:
 				print("no defined slices!")
+		#elif choice == "5":
+			#show_info(sourcefile, destfile, fps, width, bitrate)
 		elif choice == "5":
-			show_info(sourcefile, destfile, fps, width, bitrate)
-		elif choice == "6":
 			(destfile,fps,width,bitrate) = change_settings(destfile,fps,width,bitrate)
-		elif choice == "7" or choice == "Q" or choice == "q":
+		elif choice == "6" or choice == "Q" or choice == "q":
 			os.system('cls||clear')
 			quit_loop=True
 	except KeyboardInterrupt:
