@@ -58,10 +58,10 @@ else:
 #		input("press ENTER go back to the pevious menu")
 
 def video2filmstrip(sourcefile):
-	os.system("video2filmstrip" + " " + sourcefile)
+	os.system("video2filmstrip" + " \'" + sourcefile + "\'")
 
 def xdg_open(sourcefile):
-	os.system("xdg-open" + " " + sourcefile + " &> /dev/null &")
+	os.system("xdg-open" + " \'" + sourcefile + "\' &> /dev/null &")
 
 def convert_to_minutes(seconds):
 	sec = timedelta(seconds=seconds)
@@ -304,7 +304,7 @@ while not quit_loop:
 		if choice == "1":
 			xdg_open(sourcefile)
 		elif choice == "2":
-			print("=" * 39)
+			print_separator()
 			video2filmstrip(sourcefile)
 		elif choice == "3":
 			slices = slices_menu(video,slices)
