@@ -229,13 +229,14 @@ def slices_menu(video,slices):
 		## Slices Menu
 		print_title()
 		print("")
-		print("1) Automagically generate slices")
-		print("2) Add slice")
-		print("3) Change slice")
-		print("4) Remove slice")
-		print("5) Remove all slices")
+		print("1) Automagically (G)enerate slices")
+		print("2) (A)dd slice")
+		print("3) (C)hange slice")
+		print("4) (R)emove slice")
+		print("5) (D)elete all slices")
 		print("6) Show preview")
-		print("7) Back to main menu")
+		print("7) Write destination file")
+		print("8) Back to main menu")
 		print("")
 		print_separator()
 		
@@ -245,11 +246,11 @@ def slices_menu(video,slices):
 
 		slices_choice=input("# ")
 
-		if slices_choice == "1":
+		if slices_choice == "1" or slices_choice == "G" or slices_choice == "g":
 			slices = generate_slices(video)
-		elif slices_choice == "2":
+		elif slices_choice == "2" or slices_choice == "A" or slices_choice == "a":
 			slices = add_slice(slices)
-		elif slices_choice == "3":
+		elif slices_choice =="3" or slices_choice == "A" or slices_choice == "a":
 			slices = change_slice(slices)
 		elif slices_choice == "4":
 			slices = remove_slice(slices)
@@ -260,8 +261,13 @@ def slices_menu(video,slices):
 			write_vo(video,slices,tempfile,12,240,"0.5M")
 			input("press enter to resume editing")
 			os.system("rm" + " " + tempfile)
-			
 		elif slices_choice == "7":
+			if slices:
+				write_vo(video,slices,destfile,fps,width,bitrate)
+			else:
+				print("no defined slices!")
+			
+		elif slices_choice == "8":
 			slices_loop=True
 	return slices
 
@@ -290,34 +296,34 @@ while not quit_loop:
 		## Main Menu
 		print_title()
 		print("")
-		print("1) Open with default media player")
-		print("2) Create a video filmstrip")
-		print("3) Edit clip")
-		print("4) Write destination file")
-		print("5) Change settings")
-		print("6) Quit")
+		print("1) (O)pen with default media player")
+		print("2) Create a video (F)ilmstrip")
+		print("3) (E)dit clip")
+		#print("4) Write destination file")
+		print("4) Change (S)ettings")
+		print("5) (Q)uit")
 		print("")
 		print_separator()
 		
 		choice=input("# ")
 		
-		if choice == "1":
+		if choice == "1" or choice == "o" or choice == "O":
 			xdg_open(sourcefile)
-		elif choice == "2":
+		elif choice == "2" or choice == "F" or choice == "f":
 			print_separator()
 			video2filmstrip(sourcefile)
-		elif choice == "3":
+		elif choice == "3" or choice == "E" or choice == "e":
 			slices = slices_menu(video,slices)
-		elif choice == "4":
-			if slices:
-				write_vo(video,slices,destfile,fps,width,bitrate)
-			else:
-				print("no defined slices!")
+		#elif choice == "4":
+		#	if slices:
+		#		write_vo(video,slices,destfile,fps,width,bitrate)
+		#	else:
+		#		print("no defined slices!")
 		#elif choice == "5":
 			#show_info(sourcefile, destfile, fps, width, bitrate)
-		elif choice == "5":
+		elif choice == "4" or choice == "S" or choice=="s":
 			(destfile,fps,width,bitrate) = change_settings(destfile,fps,width,bitrate)
-		elif choice == "6" or choice == "Q" or choice == "q":
+		elif choice == "5" or choice == "Q" or choice == "q":
 			os.system('cls||clear')
 			quit_loop=True
 	except KeyboardInterrupt:
