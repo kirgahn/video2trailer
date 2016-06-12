@@ -23,6 +23,10 @@ sourcefile = args.sourcefile
 video = VideoFileClip(sourcefile)
 title = "|| video2trailer ||"
 
+#player="xdg-open"
+#player="vlc"
+player="mplayer"
+
 ## Set default values whereas no argument was given
 if not args.destfile:
         destfile=str(args.sourcefile)+'_trailer.webm'
@@ -61,7 +65,7 @@ def video2filmstrip(sourcefile):
 	os.system("video2filmstrip" + " \'" + sourcefile + "\'")
 
 def xdg_open(sourcefile):
-	os.system("xdg-open" + " \'" + sourcefile + "\' &> /dev/null &")
+	os.system(player + " \'" + sourcefile + "\' &> /dev/null &")
 
 def convert_to_minutes(seconds):
 	sec = timedelta(seconds=seconds)
@@ -153,7 +157,7 @@ def generate_slices(video):
 	
 def print_slices(slices):
 	(columns,rows)=os.get_terminal_size()
-	menu_rows=15
+	menu_rows=20
 	available_rows=int(rows)-menu_rows
 	slice_columns=math.ceil(len(slices)/available_rows)
 	slices_per_column=math.ceil(len(slices)/slice_columns)
@@ -197,12 +201,25 @@ def add_slice(slices):
 	print("Please insert start time for the new subclip (hh:mm:ss)")
 	ss=input("#")
 
-	print("Please insert start time for the new subclip (hh:mm:ss)")
+	print("Please insert end time for the new subclip (hh:mm:ss)")
 	se=input("#")
 
 	slices.append([convert_to_seconds(ss),convert_to_seconds(se)])
 	return slices
-	
+
+def insert_slice(slices):
+	print("In which position would you like to add a new subclip?")
+	newpos=int(input("#"))
+
+	print("Please insert start time for the new subclip (hh:mm:ss)")
+	ss=input("#")
+
+	print("Please insert end time for the new subclip (hh:mm:ss)")
+	se=input("#")
+
+	slices.insert(newpos,[convert_to_seconds(ss),convert_to_seconds(se)])
+	return slices
+		
 def change_slice(slices):
 	print("Which slice would you like to change?")
 	change_index=int(input("#"))
@@ -210,7 +227,7 @@ def change_slice(slices):
 	print("Please insert start time for the new subclip (hh:mm:ss)")
 	ss=input("#")
 
-	print("Please insert start time for the new subclip (hh:mm:ss)")
+	print("Please insert end time for the new subclip (hh:mm:ss)")
 	se=input("#")
 
 	slices[change_index]=([convert_to_seconds(ss),convert_to_seconds(se)])
@@ -229,14 +246,16 @@ def slices_menu(video,slices):
 		## Slices Menu
 		print_title()
 		print("")
-		print("1) Automagically (G)enerate slices")
-		print("2) (A)dd slice")
+		print("0) automagically (G)enerate slices")
+		print("1) (A)dd slice")
+		print("2) (I)nsert slice")
 		print("3) (C)hange slice")
 		print("4) (R)emove slice")
 		print("5) (D)elete all slices")
-		print("6) Show preview")
-		print("7) Write destination file")
-		print("8) Back to main menu")
+		print("6) preview (S)lice")
+		print("7) show clip (P)review")
+		print("8) (W)rite destination file")
+		print("9) (Q)uit to main menu")
 		print("")
 		print_separator()
 		
@@ -246,28 +265,41 @@ def slices_menu(video,slices):
 
 		slices_choice=input("# ")
 
-		if slices_choice == "1" or slices_choice == "G" or slices_choice == "g":
+		if slices_choice == "0" or slices_choice == "G" or slices_choice == "g":
 			slices = generate_slices(video)
-		elif slices_choice == "2" or slices_choice == "A" or slices_choice == "a":
+		elif slices_choice == "1" or slices_choice == "A" or slices_choice == "a":
 			slices = add_slice(slices)
-		elif slices_choice =="3" or slices_choice == "A" or slices_choice == "a":
+		elif slices_choice == "2" or slices_choice == "I" or slices_choice == "i":
+			slices = insert_slice(slices)
+		elif slices_choice =="3" or slices_choice == "C" or slices_choice == "c":
 			slices = change_slice(slices)
-		elif slices_choice == "4":
+		elif slices_choice =="4" or slices_choice == "R" or slices_choice == "r":
 			slices = remove_slice(slices)
-		elif slices_choice  == "5":
-			slices = []
-		elif slices_choice  == "6":
+		elif slices_choice =="5" or slices_choice == "D" or slices_choice == "d":
+			sure = input("Confirm operation (y/n)")
+			if sure == "y":
+				slices = []
+		elif slices_choice =="6" or slices_choice == "S" or slices_choice == "s":
+			print("which slice would you like to preview? (slice index)")
+			which_slice=int(input("#"))
+			subslice=[]
+			subslice.append(slices[which_slice])
+			tempfile=destfile+str(random.randint(0,1024))+".webm"
+			write_vo(video,subslice,tempfile,12,240,"0.5M")
+			input("press enter to resume editing")
+			os.system("rm" + " " + tempfile)
+		elif slices_choice =="7" or slices_choice == "P" or slices_choice == "p":
 			tempfile=destfile+str(random.randint(0,1024))+".webm"
 			write_vo(video,slices,tempfile,12,240,"0.5M")
 			input("press enter to resume editing")
 			os.system("rm" + " " + tempfile)
-		elif slices_choice == "7":
+		elif slices_choice =="8" or slices_choice == "W" or slices_choice == "w":
 			if slices:
 				write_vo(video,slices,destfile,fps,width,bitrate)
 			else:
 				print("no defined slices!")
 			
-		elif slices_choice == "8":
+		elif slices_choice =="9" or slices_choice == "Q" or slices_choice == "q":
 			slices_loop=True
 	return slices
 
@@ -283,7 +315,8 @@ def write_vo(video,slices,destfile,fps,width,bitrate):
 	concatenate_videoclips(vo_slices,method='compose').write_videofile(destfile, bitrate=bitrate, fps=fps)
 	vo = ""
 	
-	if input("Would you like to watch the output file (y/n)") == "y":
+	confirm=input("Would you like to watch the output file (y/n)")
+	if confirm == "y" or confirm == "Y" or confirm == "":
 		xdg_open(destfile)
 
 ## MAIN LOOP BEGINS HERE
@@ -297,10 +330,10 @@ while not quit_loop:
 		print_title()
 		print("")
 		print("1) (O)pen with default media player")
-		print("2) Create a video (F)ilmstrip")
+		print("2) create a video (F)ilmstrip")
 		print("3) (E)dit clip")
 		#print("4) Write destination file")
-		print("4) Change (S)ettings")
+		print("4) change (S)ettings")
 		print("5) (Q)uit")
 		print("")
 		print_separator()
