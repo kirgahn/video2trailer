@@ -20,39 +20,11 @@ parser.add_argument("-b", "--bitrate", help="Output videofile bitrate in \"x.x\"
 parser.add_argument("-t", "--threads", help="Number of threads to use when encoding", type=int)
 
 args = parser.parse_args()
-sourcefile = args.sourcefile
-video = VideoFileClip(sourcefile)
-title = "|| video2trailer ||"
 
-#player="xdg-open"
-#player="vlc"
-player="mplayer"
-
-
-## Set default values whereas no argument was given
-if not args.destfile:
-        destfile=str(args.sourcefile)+'_trailer.webm'
-else:
-        destfile=args.destfile
-if not args.fps:
-        fps=int(video.fps)
-else:
-        fps=args.fps
-if not args.width:
-        width=640
-else:
-        width=args.width
-if not args.bitrate:
-        bitrate="1.2M"
-else:
-        bitrate=str(args.bitrate)+"M"
-
-if not args.threads:
-	threads=4
-else:
-	threads=args.threads
-
+	
 #### Functions #####
+
+
 
 #### run video2filstrip ####
 def video2filmstrip(sourcefile):
@@ -293,28 +265,23 @@ def change_settings(destfile,fps,width,bitrate,threads):
 	
 			settings_choice=input("# ")
 	
-			#if settings_choice == "1" or settin:
 			if any(q in settings_choice for q in ["1","O","o"]):
 				new_destfile = input("destination file: ")
 				if new_destfile:
 					destfile=new_destfile
 			elif any(q in settings_choice for q in ["2","F","f"]):
-			#elif settings_choice == "2":
 				new_fps = input("fps: ")
 				if new_fps:
 					fps=int(new_fps)
 			elif any(q in settings_choice for q in ["3","W","w"]):
-			#elif settings_choice == "3":
 				new_width = input("width: ")
 				if new_width:
 					width=int(new_width)
 			elif any(q in settings_choice for q in ["4","B","b"]):
-			#elif settings_choice == "4":
 				new_bitrate = input("bitrate: ")
 				if new_bitrate:
 					bitrate=new_bitrate
 			elif any(q in settings_choice for q in ["5","T","t"]):
-			#elif settings_choice == "5":
 				new_threads = input("threads : ")
 				threads=new_threads
 			elif any(q in settings_choice for q in ["6","Q","q"]):
@@ -359,37 +326,88 @@ def slices_menu(video,slices):
 			elif any(q in slices_choice for q in ["2","I","i"]):
 				slices = insert_slice(slices)
 			elif any(q in slices_choice for q in ["3","C","c"]):
-				slices = change_slice(slices)
+				if slices:
+					slices = change_slice(slices)
+				else:
+					input("No defined slice! (Press ENTER to continue)")
 			elif any(q in slices_choice for q in ["4","R","r"]):
-				slices = remove_slice(slices)
+				if slices:
+					slices = remove_slice(slices)
+				else:
+					input("No defined slice! (Press ENTER to continue)")
 			elif any(q in slices_choice for q in ["5","D","d"]):
-				sure = input("Confirm operation (y/n)")
-				if sure == "y" or sure == "Y" or sure == "":
-					slices = []
+				if slices:
+					sure = input("Confirm operation (y/n)")
+					if sure == "y" or sure == "Y" or sure == "":
+						slices = []
+				else:
+					input("No defined slice! (Press ENTER to continue)")
 			elif any(q in slices_choice for q in ["6","S","s"]):
-				print("which slice would you like to preview? (slice index)")
-				which_slice=int(input("#"))
-				subslice=[]
-				subslice.append(slices[which_slice])
-				tempfile=destfile+str(random.randint(0,1024))+".webm"
-				write_vo(video,subslice,tempfile,12,240,"0.5M")
-				input("press enter to resume editing")
-				os.system("rm" + " " + tempfile)
+				if slices:
+					print("which slice would you like to preview? (slice index)")
+					which_slice=int(input("#"))
+					subslice=[]
+					subslice.append(slices[which_slice])
+					tempfile=destfile+str(random.randint(0,1024))+".webm"
+					write_vo(video,subslice,tempfile,12,240,"0.5M")
+					input("press enter to resume editing")
+					os.system("rm" + " " + tempfile)
+				else:
+					input("No defined slice! (Press ENTER to continue)")
 			elif any(q in slices_choice for q in ["7","P","p"]):
-				tempfile=destfile+str(random.randint(0,1024))+".webm"
-				write_vo(video,slices,tempfile,12,240,"0.5M")
-				input("press enter to resume editing")
-				os.system("rm" + " " + tempfile)
+				if slices:
+					tempfile=destfile+str(random.randint(0,1024))+".webm"
+					write_vo(video,slices,tempfile,12,240,"0.5M")
+					input("press enter to resume editing")
+					os.system("rm" + " " + tempfile)
+				else:
+					input("No defined slice! (Press ENTER to continue)")
 			elif any(q in slices_choice for q in ["8","W","w"]):
 				if slices:
 					write_vo(video,slices,destfile,fps,width,bitrate)
 				else:
-					print("no defined slices!")
+					input("No defined slice! (Press ENTER to continue)")
 			elif any(q in slices_choice for q in ["9","Q","q"]):
 				slices_loop=True
 		return slices
 	except (ValueError, OSError) as err:
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
+
+#### Load State ####
+def load_state(sourcefile):
+	line_number = 0
+	slices = []
+
+	try:
+		with open(sourcefile, encoding='utf-8') as state_file:
+			## skip first two lines
+			state_file.readline().strip()
+			state_file.readline().strip()
+		
+			video = VideoFileClip(state_file.readline().rstrip())
+			destfile = state_file.readline().rstrip()
+			fps = int(state_file.readline().rstrip())
+			bitrate = (state_file.readline().rstrip() + "M")
+			width = int(state_file.readline().rstrip())
+			threads = int(state_file.readline().rstrip())
+			
+			## skip three lines
+			state_file.readline().rstrip()
+			state_file.readline().rstrip()
+			state_file.readline().rstrip()
+	
+			for a_line in state_file:
+				line_number += 1
+				slice_line=a_line.rstrip()
+				ss=convert_to_seconds(slice_line.split('-')[0])
+				se=convert_to_seconds(slice_line.split('-')[1])
+				slices.append([ss,se])
+
+		return (video,destfile,fps,width,bitrate,threads,slices)
+
+	except (ValueError, OSError) as err:
+		print("Can't parse state file!")
+		input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
 #### Info Menu ####
 #def show_info(sourcefile, destfile, fps, width, bitrate):
@@ -408,13 +426,52 @@ def slices_menu(video,slices):
 #		input("press ENTER go back to the pevious menu")
 
 
-## MAIN LOOP BEGINS HERE
-subclip_num=1
-quit_loop=False
-slices = []
+#### Parse arguments and load state eventually
+sourcefile = args.sourcefile
 
-while not quit_loop:
-	try:
+title = "|| video2trailer ||"
+
+#player="xdg-open"
+#player="vlc"
+player="mplayer"
+
+if sourcefile.lower().endswith(('.v2t')):
+	(video,destfile,fps,width,bitrate,threads,slices) = load_state(sourcefile)
+else:
+
+	video = VideoFileClip(sourcefile)
+	slices = []
+	
+	## Set default values whereas no argument was given
+	if not args.destfile:
+	        destfile=str(args.sourcefile)+'_trailer.webm'
+	else:
+	        destfile=args.destfile
+	if not args.fps:
+	        fps=int(video.fps)
+	else:
+	        fps=args.fps
+	if not args.width:
+	        width=640
+	else:
+	        width=args.width
+	if not args.bitrate:
+	        bitrate="1.2M"
+	else:
+	        bitrate=str(args.bitrate)+"M"
+	
+	if not args.threads:
+		threads=4
+	else:
+		threads=args.threads
+
+## MAIN LOOP BEGINS HERE
+#subclip_num=1
+quit_loop=False
+
+try:
+	while not quit_loop:
+	
 		## Main Menu
 		print_title()
 		print("")
@@ -448,12 +505,9 @@ while not quit_loop:
 		elif any(q in choice for q in ["5","Q","q"]):
 			os.system('cls||clear')
 			quit_loop=True
-	except KeyboardInterrupt:
+except KeyboardInterrupt:
 			video = ""
 			os.system('cls||clear')
 			sys.exit()
-	except (ValueError, OSError) as err:
-                input("Error: {0}".format(err) + " (Press ENTER to continue)")
-
-#
-
+except (ValueError, OSError) as err:
+	input("Error: {0}".format(err) + " (Press ENTER to continue)")
