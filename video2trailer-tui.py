@@ -26,6 +26,7 @@ title = "|| video2trailer ||"
 #player="xdg-open"
 #player="vlc"
 player="mplayer"
+threads=4
 
 ## Set default values whereas no argument was given
 if not args.destfile:
@@ -239,6 +240,23 @@ def remove_slice(slices):
 
 	slices.pop(change_index)
 	return slices
+
+def write_vo(video,slices,destfile,fps,width,bitrate):
+	vo_slices = []
+	for i in range(len(slices)):
+		(ss,se)=slices[i]
+		vo = video.subclip(ss,se)
+		vo = vo.resize(width=width)
+		vo_slices.append(vo)
+	
+	### Tell MoviePy to concatenate the selected subclips that are in the slices[] array.
+	concatenate_videoclips(vo_slices,method='compose').write_videofile(destfile,bitrate=bitrate,fps=fps,threads=threads)
+	vo = ""
+	
+	confirm=input("Would you like to watch the output file (y/n)")
+	if confirm == "y" or confirm == "Y" or confirm == "":
+		xdg_open(destfile)
+
 		
 def slices_menu(video,slices):
 	slices_loop=False
@@ -303,21 +321,6 @@ def slices_menu(video,slices):
 			slices_loop=True
 	return slices
 
-def write_vo(video,slices,destfile,fps,width,bitrate):
-	vo_slices = []
-	for i in range(len(slices)):
-		(ss,se)=slices[i]
-		vo = video.subclip(ss,se)
-		vo = vo.resize(width=width)
-		vo_slices.append(vo)
-	
-	### Tell MoviePy to concatenate the selected subclips that are in the slices[] array.
-	concatenate_videoclips(vo_slices,method='compose').write_videofile(destfile, bitrate=bitrate, fps=fps)
-	vo = ""
-	
-	confirm=input("Would you like to watch the output file (y/n)")
-	if confirm == "y" or confirm == "Y" or confirm == "":
-		xdg_open(destfile)
 
 ## MAIN LOOP BEGINS HERE
 subclip_num=1
