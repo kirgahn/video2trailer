@@ -345,13 +345,16 @@ def slices_menu(video,slices):
 			elif any(q in slices_choice for q in ["6","S","s"]):
 				if slices:
 					print("which slice would you like to preview? (slice index)")
-					which_slice=int(input("#"))
-					subslice=[]
-					subslice.append(slices[which_slice])
-					tempfile=destfile+str(random.randint(0,1024))+".webm"
-					write_vo(video,subslice,tempfile,12,240,"0.5M")
-					input("press enter to resume editing")
-					os.system("rm" + " " + tempfile)
+					try:
+						which_slice=int(input("#"))
+						subslice=[]
+						subslice.append(slices[which_slice])
+						tempfile=destfile+str(random.randint(0,1024))+".webm"
+						write_vo(video,subslice,tempfile,12,240,"0.5M")
+						input("press enter to resume editing")
+						os.system("rm" + " " + tempfile)
+					except (ValueError, OSError) as err:
+				                input("Error: {0}".format(err) + " (Press ENTER to continue)")
 				else:
 					input("No defined slice! (Press ENTER to continue)")
 			elif any(q in slices_choice for q in ["7","P","p"]):
