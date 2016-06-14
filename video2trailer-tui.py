@@ -236,7 +236,7 @@ def write_vo(video,slices,destfile,fps,width,bitrate):
 			vo = video.subclip(ss,se)
 			vo = vo.resize(width=width)
 			vo_slices.append(vo)
-		
+
 		### Tell MoviePy to concatenate the selected subclips that are in the slices[] array.
 		concatenate_videoclips(vo_slices,method='compose').write_videofile(destfile,bitrate=bitrate,fps=fps,threads=threads)
 		vo = ""
@@ -244,6 +244,34 @@ def write_vo(video,slices,destfile,fps,width,bitrate):
 		confirm=input("Would you like to watch the output file (y/n)")
 		if confirm == "y" or confirm == "Y" or confirm == "":
 			xdg_open(destfile)
+	except (ValueError, OSError) as err:
+                input("Error: {0}".format(err) + " (Press ENTER to continue)")
+
+def write_preview(video,slices,destfile,fps,width,bitrate):
+	try:
+		vo_slices = []
+		for i in range(len(slices)):
+			(ss,se)=slices[i]
+			subclip = video.subclip(ss,se)
+
+			#txt_clip = TextClip(str(i),fontsize=60,color='black')
+			txt_clip = TextClip(str(i),fontsize=28,color='black',stroke_color='black',stroke_width=1.5)
+			txt_clip = txt_clip.set_pos(('left','top')).set_duration(3)
+
+			subclip = subclip.resize(width=width)
+			vo = CompositeVideoClip([subclip, txt_clip])
+			vo_slices.append(vo)
+
+		### Tell MoviePy to concatenate the selected subclips that are in the slices[] array.
+		concatenate_videoclips(vo_slices,method='compose').write_videofile(destfile,bitrate=bitrate,fps=fps,threads=threads)
+		vo = ""
+		
+		confirm=input("Would you like to watch the output file (y/n)")
+		if confirm == "y" or confirm == "Y" or confirm == "":
+			xdg_open(destfile)
+			input("press enter to resume editing")
+		os.system("rm" + " " + destfile)
+
 	except (ValueError, OSError) as err:
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
@@ -344,25 +372,24 @@ def slices_menu(video,slices):
 					input("No defined slice! (Press ENTER to continue)")
 			elif any(q in slices_choice for q in ["6","S","s"]):
 				if slices:
-					print("which slice would you like to preview? (slice index)")
 					try:
+						print("which slice would you like to preview? (slice index)")
 						which_slice=int(input("#"))
 						subslice=[]
 						subslice.append(slices[which_slice])
 						tempfile=destfile+str(random.randint(0,1024))+".webm"
-						write_vo(video,subslice,tempfile,12,240,"0.5M")
-						input("press enter to resume editing")
-						os.system("rm" + " " + tempfile)
+						write_preview(video,subslice,tempfile,20,320,"0.5M")
 					except (ValueError, OSError) as err:
 				                input("Error: {0}".format(err) + " (Press ENTER to continue)")
 				else:
 					input("No defined slice! (Press ENTER to continue)")
 			elif any(q in slices_choice for q in ["7","P","p"]):
 				if slices:
-					tempfile=destfile+str(random.randint(0,1024))+".webm"
-					write_vo(video,slices,tempfile,12,240,"0.5M")
-					input("press enter to resume editing")
-					os.system("rm" + " " + tempfile)
+					try:
+						tempfile=destfile+str(random.randint(0,1024))+".webm"
+						write_preview(video,slices,tempfile,20,320,"0.5M")
+					except (ValueError, OSError) as err:
+				                input("Error: {0}".format(err) + " (Press ENTER to continue)")
 				else:
 					input("No defined slice! (Press ENTER to continue)")
 			elif any(q in slices_choice for q in ["8","W","w"]):
@@ -390,7 +417,8 @@ def load_state(state_file_name):
 			video = VideoFileClip(state_file.readline().rstrip())
 			destfile = state_file.readline().rstrip()
 			fps = int(state_file.readline().rstrip())
-			bitrate = (state_file.readline().rstrip() + "M")
+			#bitrate = (state_file.readline().rstrip() + "M")
+			bitrate = (state_file.readline().rstrip())
 			width = int(state_file.readline().rstrip())
 			threads = int(state_file.readline().rstrip())
 			
