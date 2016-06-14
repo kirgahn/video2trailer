@@ -297,14 +297,14 @@ def slices_menu(video,slices):
 			## Slices Menu
 			print_title()
 			print("")
-			print("0) automagically (G)enerate slices")
+			print("0) (G)enerate slices")
 			print("1) (A)dd slice")
 			print("2) (I)nsert slice")
 			print("3) (C)hange slice")
 			print("4) (R)emove slice")
 			print("5) (D)elete all slices")
-			print("6) preview (S)lice")
-			print("7) show clip (P)review")
+			print("6) (S)lice preview")
+			print("7) (P)review clip")
 			print("8) (W)rite destination file")
 			print("9) (Q)uit to main menu")
 			print("")
@@ -412,6 +412,47 @@ def load_state(sourcefile):
 		print("Can't parse state file!")
 		input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
+#### Save State ####
+def save_state(sourcefile,destfile,fps,width,bitrate,threads,slices):
+	line_number = 0
+	
+	if sourcefile.find(".v2t")>0:
+		state_file_name=sourcefile
+		sourcefile=os.path.splitext(sourcefile)[0]
+	else:
+		state_file_name=sourcefile + ".v2t"
+
+	try:
+		with open(state_file_name,mode='w', encoding='utf-8') as state_file:
+			state_file.write("settings"+"\n")
+			state_file.write("-"*12 +"\n")
+
+			state_file.write(sourcefile+"\n")
+			state_file.write(destfile+"\n")
+			state_file.write(str(fps)+"\n")
+			state_file.write(bitrate+"\n")
+			state_file.write(str(width)+"\n")
+			state_file.write(str(threads)+"\n")
+			
+			state_file.write(""+"\n")
+			state_file.write("slices"+"\n")
+			state_file.write("-"*12+"\n")
+	
+			for a_line in range(len(slices)):
+				(ss,se)=slices[a_line]
+				ss=convert_to_minutes(ss)
+				se=convert_to_minutes(se)
+				state_file.write(str(ss)+"-"+str(se)+"\n")
+				line_number += 1
+
+		#return (video,destfile,fps,width,bitrate,threads,slices)
+		input("State saved correctly (Press ENTER to continue)")
+
+	except (ValueError, OSError) as err:
+		print("Can't parse state file!")
+		input("Error: {0}".format(err) + " (Press ENTER to continue)")
+
+
 #### Info Menu ####
 #def show_info(sourcefile, destfile, fps, width, bitrate):
 #		os.system('cls||clear')
@@ -479,11 +520,12 @@ try:
 		print_title()
 		print("")
 		print("1) (O)pen with default media player")
-		print("2) create a video (F)ilmstrip")
+		print("2) (F)ilmstrip")
 		print("3) (E)dit clip")
 		#print("4) Write destination file")
-		print("4) change (S)ettings")
-		print("5) (Q)uit")
+		print("4) (C)hange settings")
+		print("5) (S)ave state file")
+		print("6) (Q)uit")
 		print("")
 		print_separator()
 		
@@ -496,16 +538,11 @@ try:
 			video2filmstrip(sourcefile)
 		elif any(q in choice for q in ["3","E","e"]):
 			slices = slices_menu(video,slices)
-		#elif choice == "4":
-		#	if slices:
-		#		write_vo(video,slices,destfile,fps,width,bitrate)
-		#	else:
-		#		print("no defined slices!")
-		#elif choice == "5":
-			#show_info(sourcefile, destfile, fps, width, bitrate)
-		elif any(q in choice for q in ["4","S","s"]):
+		elif any(q in choice for q in ["4","c","c"]):
 			(destfile,fps,width,bitrate,threads) = change_settings(destfile,fps,width,bitrate,threads)
-		elif any(q in choice for q in ["5","Q","q"]):
+		elif any(q in choice for q in ["5","S","s"]):
+			save_state(sourcefile,destfile,fps,width,bitrate,threads,slices)
+		elif any(q in choice for q in ["6","Q","q"]):
 			os.system('cls||clear')
 			quit_loop=True
 except KeyboardInterrupt:
