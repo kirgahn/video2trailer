@@ -316,7 +316,7 @@ def slices_menu(video,slices):
 	
 			slices_choice=input("# ")
 	
-			if any(q in slices_choice for q in ["1","G","g"]):
+			if any(q in slices_choice for q in ["0","G","g"]):
 				new_slices=[]
 				new_slices = generate_slices(video)
 				if new_slices:
@@ -377,12 +377,12 @@ def slices_menu(video,slices):
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
 #### Load State ####
-def load_state(sourcefile):
+def load_state(state_file_name):
 	line_number = 0
 	slices = []
 
 	try:
-		with open(sourcefile, encoding='utf-8') as state_file:
+		with open(state_file_name, encoding='utf-8') as state_file:
 			## skip first two lines
 			state_file.readline().strip()
 			state_file.readline().strip()
@@ -471,43 +471,50 @@ def save_state(sourcefile,destfile,fps,width,bitrate,threads,slices):
 
 
 #### Parse arguments and load state eventually
-sourcefile = args.sourcefile
 
 title = "|| video2trailer ||"
-
 #player="xdg-open"
 #player="vlc"
 player="mplayer"
 
-if sourcefile.lower().endswith(('.v2t')):
-	(video,destfile,fps,width,bitrate,threads,slices) = load_state(sourcefile)
-else:
+sourcefile = args.sourcefile
 
-	video = VideoFileClip(sourcefile)
-	slices = []
-	
-	## Set default values whereas no argument was given
-	if not args.destfile:
-	        destfile=str(args.sourcefile)+'_trailer.webm'
-	else:
-	        destfile=args.destfile
-	if not args.fps:
-	        fps=int(video.fps)
-	else:
-	        fps=args.fps
-	if not args.width:
-	        width=640
-	else:
-	        width=args.width
-	if not args.bitrate:
-	        bitrate="1.2M"
-	else:
-	        bitrate=str(args.bitrate)+"M"
-	
-	if not args.threads:
-		threads=4
-	else:
-		threads=args.threads
+if sourcefile.lower().endswith(('.v2t')):
+	state_file_name=sourcefile
+	(video,destfile,fps,width,bitrate,threads,slices) = load_state(state_file_name)
+	sourcefile=os.path.splitext(sourcefile)[0]
+else:
+	state_file_name=sourcefile + ".v2t"
+	try:
+		with open(state_file_name,encoding='utf-8'):
+			(video,destfile,fps,width,bitrate,threads,slices) = load_state(state_file_name)
+	except (ValueError, OSError):
+
+		video = VideoFileClip(sourcefile)
+		slices = []
+		
+		## Set default values whereas no argument was given
+		if not args.destfile:
+		        destfile=str(args.sourcefile)+'_trailer.webm'
+		else:
+		        destfile=args.destfile
+		if not args.fps:
+		        fps=int(video.fps)
+		else:
+		        fps=args.fps
+		if not args.width:
+		        width=640
+		else:
+		        width=args.width
+		if not args.bitrate:
+		        bitrate="1.2M"
+		else:
+		        bitrate=str(args.bitrate)+"M"
+		
+		if not args.threads:
+			threads=4
+		else:
+			threads=args.threads
 
 ## MAIN LOOP BEGINS HERE
 #subclip_num=1
