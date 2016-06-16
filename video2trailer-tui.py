@@ -176,7 +176,7 @@ def insert_slice(slices):
 			se=convert_to_seconds(input("#"))
 	
 			if (ss < round(video.duration)) and (se < round(video.duration)):
-				slices.insert(newpos,ss,se)
+				slices.insert(newpos,[ss,se])
 			else:
 	                        input("Slices can't start/end after the end of the source video. (Press ENTER to continue)")
 		else:
