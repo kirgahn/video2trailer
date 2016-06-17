@@ -268,6 +268,8 @@ def write_preview(video,slices,destfile,fps,width,bitrate):
 
 		### Tell MoviePy to concatenate the selected subclips that are in the slices[] array.
 		concatenate_videoclips(vo_slices,method='compose').write_videofile(destfile,bitrate=bitrate,fps=fps,threads=threads)
+		#concatenate_videoclips(vo_slices,method='compose').write_videofile(destfile,bitrate=bitrate,fps=fps,threads=threads,ffmpeg_params=['-crf 10', '-b:v 0'])
+		#concatenate_videoclips(vo_slices,method='compose').write_videofile(destfile,bitrate=bitrate,fps=fps,threads=threads,ffmpeg_params=['-crf 10'])
 		vo = ""
 		
 		confirm=input("Would you like to watch the output file (y/n)")
