@@ -254,9 +254,13 @@ def write_preview(video,slices,destfile,fps,width,bitrate):
 			(ss,se)=slices[i]
 			subclip = video.subclip(ss,se)
 
-			#txt_clip = TextClip(str(i),fontsize=60,color='black')
-			txt_clip = TextClip(str(i),fontsize=28,color='black',stroke_color='black',stroke_width=1.5)
-			txt_clip = txt_clip.set_pos(('left','top')).set_duration(3)
+			txt_clip = TextClip(str(i),fontsize=30,color='black',stroke_color='black',stroke_width=2)
+			if int(subclip.duration) < 2:
+				txt_clip = txt_clip.set_pos(('left','top')).set_duration(1)
+			elif int(subclip.duration) < 3:
+				txt_clip = txt_clip.set_pos(('left','top')).set_duration(2)
+			else:
+				txt_clip = txt_clip.set_pos(('left','top')).set_duration(3)
 
 			subclip = subclip.resize(width=width)
 			vo = CompositeVideoClip([subclip, txt_clip])
@@ -270,7 +274,7 @@ def write_preview(video,slices,destfile,fps,width,bitrate):
 		if confirm == "y" or confirm == "Y" or confirm == "":
 			xdg_open(destfile)
 			input("press enter to resume editing")
-		os.system("rm" + " " + destfile)
+		os.system("rm" + " " + "\'" + destfile + "\'" )
 
 	except (ValueError, OSError) as err:
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
