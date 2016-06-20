@@ -33,6 +33,13 @@ def video2filmstrip(sourcefile):
 	except OSError as err:
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
+#### run video2trailer-compress ####
+def compress(destfile):
+	try:
+		os.system("video2trailer-compress" + " \'" + destfile + "\'")
+	except OSError as err:
+                input("Error: {0}".format(err) + " (Press ENTER to continue)")
+
 #### open sourcefile with default player ####
 def xdg_open(sourcefile):
 	if sourcefile:
@@ -566,7 +573,8 @@ try:
 		#print("4) Write destination file")
 		print("4) (C)hange settings")
 		print("5) (S)ave state file")
-		print("6) (Q)uit")
+		print("6) co(M)press destination file")
+		print("7) (Q)uit")
 		print("")
 		print_separator()
 		
@@ -583,7 +591,9 @@ try:
 			(destfile,fps,width,bitrate,threads) = change_settings(destfile,fps,width,bitrate,threads)
 		elif any(q in choice for q in ["5","S","s"]):
 			save_state(sourcefile,destfile,fps,width,bitrate,threads,slices)
-		elif any(q in choice for q in ["6","Q","q"]):
+		elif any(q in choice for q in ["6","M","m"]):
+			compress(destfile)
+		elif any(q in choice for q in ["7","Q","q"]):
 			os.system('cls||clear')
 			quit_loop=True
 except KeyboardInterrupt:

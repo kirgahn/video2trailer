@@ -5,6 +5,9 @@
 #### target a specific filesize 					      	##
 ##################################################################################
 
+#### should we add a watermark?
+watermark=1
+
 #### get video duration
 duration_float=`ffprobe -i "$1" -show_format -v quiet | sed -n 's/duration=//p'`
 source_duration=`echo "scale=2;$duration_float"|bc`
@@ -27,4 +30,10 @@ target_bitrate=$(echo $target_bitrate-$audio_bitrate|bc)
 echo "estimated video bitrate for target size " $target_size"M: "$target_bitrate"k"
 echo "output file is: " $1"."$target_size"M.webm"
 
-ffmpeg -i $1 -c:v libvpx-vp9 -minrate $target_bitrate"k" -maxrate $target_bitrate"k" -b:v $target_bitrate"k" -c:a libvorbis -q 0 -threads 4 $1"."$target_size"M.webm"
+#ffmpeg -i $1 -c:v libvpx-vp9 -minrate $target_bitrate"k" -maxrate $target_bitrate"k" -b:v $target_bitrate"k" -c:a libvorbis -q 0 -threads 4 $1"."$target_size"M.webm"
+
+if [ $watermark == 1 ]; 
+	then ffmpeg -i $1 -vf drawtext="fontfile=impact: text='K': fontcolor=white: fontsize=26: alpha=0.4: shadowcolor=black: shadowx=1: shadowy=1: x=10: y=(main_h-30):" -c:v libvpx-vp9 -minrate $target_bitrate"k" -maxrate $target_bitrate"k" -b:v $target_bitrate"k" -c:a libvorbis -q 0 -threads 4 $1"."$target_size"M.webm";
+else
+	ffmpeg -i $1 -c:v libvpx-vp9 -minrate $target_bitrate"k" -maxrate $target_bitrate"k" -b:v $target_bitrate"k" -c:a libvorbis -q 0 -threads 4 $1"."$target_size"M.webm";
+fi
