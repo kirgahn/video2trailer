@@ -5,6 +5,18 @@
 #### target a specific filesize 					      	##
 ##################################################################################
 
+while getopts ":s:" o; do
+    case "${o}" in
+        s)
+            target_size=${OPTARG}
+            ;;
+        *)
+            target_size=4
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
 #### should we add a watermark?
 watermark=1
 
@@ -26,7 +38,6 @@ source_duration=`echo "scale=2;$duration_float"|bc`
 #### audio bitrate is defined in quality tiers, we are using q0 (64kbps)
 #### all the available quality tiers for libvorbis are available @
 #### https://en.wikipedia.org/wiki/Vorbis#Technical_details
-target_size=4
 audio_bitrate=64
 threads=4
 
