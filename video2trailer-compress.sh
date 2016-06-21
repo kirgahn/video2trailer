@@ -71,7 +71,7 @@ echo "output file is: " $1"."$target_size"M.webm"
 #ffmpeg -i $1 -c:v libvpx-vp9 -minrate $target_bitrate"k" -maxrate $target_bitrate"k" -b:v $target_bitrate"k" -c:a libvorbis -q 0 -threads 4 $1"."$target_size"M.webm"
 
 if [ $watermark == 1 ]; 
-	then ffmpeg -stats -i $1 -vf drawtext="fontfile=impact: text='K': fontcolor=white: fontsize=26: alpha=0.4: shadowcolor=black: shadowx=1: shadowy=1: x=10: y=(main_h-30):" -c:v $encoder -minrate $target_bitrate"k" -maxrate $target_bitrate"k" -b:v $target_bitrate"k" -c:a libvorbis -q 0 -threads 4 $1"."$target_size"M.webm";
+	then ffmpeg -stats  -v quiet -i $1 -vf drawtext="fontfile=impact: text='K': fontcolor=white: fontsize=26: alpha=0.4: shadowcolor=black: shadowx=1: shadowy=1: x=10: y=(main_h-30):" -c:v $encoder -minrate $target_bitrate"k" -maxrate $target_bitrate"k" -b:v $target_bitrate"k" -c:a libvorbis -q 0 -threads 4 $1"."$target_size"M.webm";
 else
-	ffmpeg -stats -i $1 -c:v $encoder -minrate $target_bitrate"k" -maxrate $target_bitrate"k" -b:v $target_bitrate"k" -c:a libvorbis -q 0 -threads 4 $1"."$target_size"M.webm";
+	ffmpeg -stats -v quiet -i $1 -c:v $encoder -minrate $target_bitrate"k" -maxrate $target_bitrate"k" -b:v $target_bitrate"k" -c:a libvorbis -q 0 -threads 4 $1"."$target_size"M.webm";
 fi
