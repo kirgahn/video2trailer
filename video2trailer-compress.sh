@@ -1,21 +1,35 @@
 #!/bin/bash
 
 ##################################################################################
-#### v2t-compress (re)encodes to a constant bitrate webm (VP9/libvorbis) try to ##
-#### target a specific filesize 					      	##
+#### v2t-compress (re)encodes to a constant bitrate webm (VP8/9 - libvorbis)    ##
+#### targeting a specific filesize 					      	##
 ##################################################################################
 
-while getopts ":s:" o; do
-    case "${o}" in
-        s)
-            target_size=${OPTARG}
-            ;;
-        *)
-            target_size=4
-            ;;
-    esac
+### Parse Options ####
+target_size=4
+while getopts ":s:" opt; do
+	case $opt in
+	s)
+		target_size=$OPTARG
+		shift $((OPTIND-1))
+		;;
+	\?)
+		echo "Invalid option: -$OPTARG" >&2
+		exit 1
+		;;
+	:)
+		echo "Option -$OPTARG requires an argument." >&2
+		exit 1
+		;;
+	esac
 done
-shift $((OPTIND-1))
+
+case $1 in
+	"")
+		echo "No source file specified" >&2
+		exit 1
+		;;
+esac
 
 #### should we add a watermark?
 watermark=1
@@ -44,6 +58,12 @@ threads=4
 target_bitrate=$(echo $target_size*8192|bc)
 target_bitrate=$(echo $target_bitrate/$source_duration|bc)
 target_bitrate=$(echo $target_bitrate-$audio_bitrate|bc)
+
+if [[ ! $target_bitrate -gt 0 ]];
+	then
+		echo "target size $target_size is not enough to contain the video stream, got a negative bitrate of: $target_bitrate kbps";
+		exit 1
+fi
 
 echo "estimated video bitrate for target size " $target_size"M: "$target_bitrate"k"
 echo "output file is: " $1"."$target_size"M.webm"
