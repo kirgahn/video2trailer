@@ -18,6 +18,7 @@ parser.add_argument("-f", "--fps", help="Output videofile frames per second, if 
 parser.add_argument("-w", "--width", help="Resolution width of the output file in pixels, if empty assumes 640", type=int)
 parser.add_argument("-b", "--bitrate", help="Output videofile bitrate in \"x.x\" format, if empty assumes \"1.2M\"", type=float)
 parser.add_argument("-t", "--threads", help="Number of threads to use when encoding", type=int)
+parser.add_argument("-s", "--targetsize", help="Target size in MB for the final compressed video", type=int)
 
 args = parser.parse_args()
 
@@ -34,11 +35,15 @@ def video2filmstrip(sourcefile):
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
 #### run video2trailer-compress ####
-def compress(destfile):
+def compress(destfile,target_size):
 	try:
-		os.system("video2trailer-compress" + " \'" + destfile + "\'")
+		os.system("video2trailer-compress -s " + str(target_size) +  " \'" + destfile + "\'")
 	except OSError as err:
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
+
+	confirm=input("Would you like to watch the output file (y/n)")
+	if confirm == "y" or confirm == "Y" or confirm == "":
+		xdg_open(destfile+"."+str(target_size)+"M.webm")
 
 #### open sourcefile with default player ####
 def xdg_open(sourcefile):
@@ -235,7 +240,7 @@ def remove_slice(slices):
                 input("Slice position is invalid. (Press ENTER to continue)")
 	return slices
 
-def write_vo(video,slices,destfile,fps,width,bitrate):
+def write_vo(video,slices,destfile,fps,width,bitrate,target_size):
 	try:
 		vo_slices = []
 		for i in range(len(slices)):
@@ -247,10 +252,15 @@ def write_vo(video,slices,destfile,fps,width,bitrate):
 		### Tell MoviePy to concatenate the selected subclips that are in the slices[] array.
 		concatenate_videoclips(vo_slices,method='compose').write_videofile(destfile,bitrate=bitrate,fps=fps,threads=threads)
 		vo = ""
-		
+
+
 		confirm=input("Would you like to watch the output file (y/n)")
 		if confirm == "y" or confirm == "Y" or confirm == "":
 			xdg_open(destfile)
+
+		if int(target_size) > 0:
+			compress(destfile,target_size)
+		
 	except (ValueError, OSError) as err:
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
@@ -288,19 +298,20 @@ def write_preview(video,slices,destfile,fps,width,bitrate):
 	except (ValueError, OSError) as err:
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
-def change_settings(destfile,fps,width,bitrate,threads):
+def change_settings(destfile,fps,width,bitrate,threads,target_size):
 	try:
 		settings_loop=False
 		while not settings_loop:
 			## Settings Menu
 			print_title()
 			print("")
-			print("1) change (O)utput Filename (" + destfile + ")")
-			print("2) change (F)ps (" + str(fps) + ")")
-			print("3) change (W)idth (" + str(width) + ")")
-			print("4) change (B)itrate (" + bitrate + ")")
-			print("5) number of (T)hreads (" + str(threads) + ")")
-			print("6) (Quit) to main menu")
+			print("1) (O)utput Filename (" + destfile + ")")
+			print("2) (F)ps (" + str(fps) + ")")
+			print("3) (W)idth (" + str(width) + ")")
+			print("4) (B)itrate (" + bitrate + ")")
+			print("5) encoder (T)hreads (" + str(threads) + ")")
+			print("6) (C)ompressed video target size (0 means no further compression) (" + str(target_size) + ")")
+			print("7) (Quit) to main menu")
 			print("")
 			print_separator()
 	
@@ -323,11 +334,14 @@ def change_settings(destfile,fps,width,bitrate,threads):
 				if new_bitrate:
 					bitrate=new_bitrate
 			elif any(q in settings_choice for q in ["5","T","t"]):
-				new_threads = input("threads : ")
+				new_threads = input("threads: ")
 				threads=new_threads
-			elif any(q in settings_choice for q in ["6","Q","q"]):
+			elif any(q in settings_choice for q in ["6","C","c"]):
+				new_target_size = input("target size: ")
+				target_size=new_target_size
+			elif any(q in settings_choice for q in ["7","Q","q"]):
 				settings_loop=True
-		return (destfile,fps,width,bitrate,threads)
+		return (destfile,fps,width,bitrate,threads,target_size)
 	except (ValueError, OSError) as err:
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
 		
@@ -407,7 +421,7 @@ def slices_menu(video,slices):
 					input("No defined slice! (Press ENTER to continue)")
 			elif any(q in slices_choice for q in ["8","W","w"]):
 				if slices:
-					write_vo(video,slices,destfile,fps,width,bitrate)
+					write_vo(video,slices,destfile,fps,width,bitrate,target_size)
 				else:
 					input("No defined slice! (Press ENTER to continue)")
 			elif any(q in slices_choice for q in ["9","Q","q"]):
@@ -434,6 +448,7 @@ def load_state(state_file_name):
 			bitrate = (state_file.readline().rstrip())
 			width = int(state_file.readline().rstrip())
 			threads = int(state_file.readline().rstrip())
+			target_size = int(state_file.readline().rstrip())
 			
 			## skip three lines
 			state_file.readline().rstrip()
@@ -447,14 +462,14 @@ def load_state(state_file_name):
 				se=convert_to_seconds(slice_line.split('-')[1])
 				slices.append([ss,se])
 
-		return (video,destfile,fps,width,bitrate,threads,slices)
+		return (video,destfile,fps,width,bitrate,threads,target_size,slices)
 
 	except (ValueError, OSError) as err:
 		print("Can't parse state file!")
 		input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
 #### Save State ####
-def save_state(sourcefile,destfile,fps,width,bitrate,threads,slices):
+def save_state(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices):
 	line_number = 0
 	
 	if sourcefile.find(".v2t")>0:
@@ -474,6 +489,7 @@ def save_state(sourcefile,destfile,fps,width,bitrate,threads,slices):
 			state_file.write(bitrate+"\n")
 			state_file.write(str(width)+"\n")
 			state_file.write(str(threads)+"\n")
+			state_file.write(str(target_size)+"\n")
 			
 			state_file.write(""+"\n")
 			state_file.write("slices"+"\n")
@@ -522,13 +538,13 @@ sourcefile = args.sourcefile
 
 if sourcefile.lower().endswith(('.v2t')):
 	state_file_name=sourcefile
-	(video,destfile,fps,width,bitrate,threads,slices) = load_state(state_file_name)
+	(video,destfile,fps,width,bitrate,threads,target_size,slices) = load_state(state_file_name)
 	sourcefile=os.path.splitext(sourcefile)[0]
 else:
 	state_file_name=sourcefile + ".v2t"
 	try:
 		with open(state_file_name,encoding='utf-8'):
-			(video,destfile,fps,width,bitrate,threads,slices) = load_state(state_file_name)
+			(video,destfile,fps,width,bitrate,threads,target_size,slices) = load_state(state_file_name)
 	except (ValueError, OSError):
 
 		video = VideoFileClip(sourcefile)
@@ -556,6 +572,12 @@ else:
 			threads=4
 		else:
 			threads=args.threads
+
+		if not args.targetsize:
+			target_size=4
+		else:
+			target_size=args.targetsize
+
 
 ## MAIN LOOP BEGINS HERE
 #subclip_num=1
@@ -588,9 +610,9 @@ try:
 		elif any(q in choice for q in ["3","E","e"]):
 			slices = slices_menu(video,slices)
 		elif any(q in choice for q in ["4","c","c"]):
-			(destfile,fps,width,bitrate,threads) = change_settings(destfile,fps,width,bitrate,threads)
+			(destfile,fps,width,bitrate,threads,target_size) = change_settings(destfile,fps,width,bitrate,threads,target_size)
 		elif any(q in choice for q in ["5","S","s"]):
-			save_state(sourcefile,destfile,fps,width,bitrate,threads,slices)
+			save_state(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices)
 		elif any(q in choice for q in ["6","M","m"]):
 			compress(destfile)
 		elif any(q in choice for q in ["7","Q","q"]):
