@@ -7,6 +7,8 @@
 
 ### Parse Options ####
 target_size=4
+source_file=$1
+
 while getopts ":s:" opt; do
 	case $opt in
 	s)
@@ -40,9 +42,8 @@ encoder=libvpx
 ## VP9
 #encoder=libvpx-vp9
 
-
 #### get video duration
-duration_float=`ffprobe -i "$1" -show_format -v quiet | sed -n 's/duration=//p'`
+duration_float=`ffprobe -i "$source_file" -show_format -v quiet | sed -n 's/duration=//p'`
 source_duration=`echo "scale=2;$duration_float"|bc`
 
 #### target size is expressed in Megabytes the converted to Megabits
@@ -66,12 +67,11 @@ if [[ ! $target_bitrate -gt 0 ]];
 fi
 
 echo "estimated video bitrate for target size " $target_size"M: "$target_bitrate"k"
-echo "output file is: " $1"."$target_size"M.webm"
-
-#ffmpeg -i $1 -c:v libvpx-vp9 -minrate $target_bitrate"k" -maxrate $target_bitrate"k" -b:v $target_bitrate"k" -c:a libvorbis -q 0 -threads 4 $1"."$target_size"M.webm"
+echo "output file is: " "$source_file""."$target_size"M.webm"
 
 if [ $watermark == 1 ]; 
-	then ffmpeg -stats  -v quiet -i $1 -vf drawtext="fontfile=impact: text='K': fontcolor=white: fontsize=26: alpha=0.4: shadowcolor=black: shadowx=1: shadowy=1: x=10: y=(main_h-30):" -c:v $encoder -minrate $target_bitrate"k" -maxrate $target_bitrate"k" -b:v $target_bitrate"k" -c:a libvorbis -q 0 -threads 4 $1"."$target_size"M.webm";
-else
-	ffmpeg -stats -v quiet -i $1 -c:v $encoder -minrate $target_bitrate"k" -maxrate $target_bitrate"k" -b:v $target_bitrate"k" -c:a libvorbis -q 0 -threads 4 $1"."$target_size"M.webm";
+	then 
+		ffmpeg -stats -v quiet -i "$source_file" -vf drawtext="fontfile=impact: text='K': fontcolor=white: fontsize=26: alpha=0.4: shadowcolor=black: shadowx=1: shadowy=1: x=10: y=(main_h-30):" -c:v $encoder -minrate $target_bitrate"k" -maxrate $target_bitrate"k" -b:v $target_bitrate"k" -c:a libvorbis -q 0 -threads 4 "$source_file""."$target_size"M.webm";
+	else
+		ffmpeg -stats -v quiet -i "$source_file" -c:v $encoder -minrate $target_bitrate"k" -maxrate $target_bitrate"k" -b:v $target_bitrate"k" -c:a libvorbis -q 0 -threads 4 "$source_file""."$target_size"M.webm";
 fi
