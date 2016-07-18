@@ -7,7 +7,6 @@
 
 ### Parse Options ####
 target_size=4
-source_file=$1
 
 while getopts ":s:" opt; do
 	case $opt in
@@ -33,6 +32,8 @@ case $1 in
 		;;
 esac
 
+source_file=$1
+
 #### should we add a watermark?
 watermark=1
 
@@ -46,7 +47,7 @@ encoder=libvpx
 duration_float=`ffprobe -i "$source_file" -show_format -v quiet | sed -n 's/duration=//p'`
 source_duration=`echo "scale=2;$duration_float"|bc`
 
-#### target size is expressed in Megabytes the converted to Megabits
+#### target size is expressed in Megabytes and then converted to Megabits
 #### the outcome is then subtracted by the audio bitrate
 #### the final target_bitrate is the constant bitrate that will be used 
 #### to encode the video stream
@@ -59,6 +60,13 @@ threads=4
 target_bitrate=$(echo $target_size*8192|bc)
 target_bitrate=$(echo $target_bitrate/$source_duration|bc)
 target_bitrate=$(echo $target_bitrate-$audio_bitrate|bc)
+
+#### DEBUG info
+#echo "errore? target_bitrate:"$target_bitrate
+#echo '$target_size:'$target_size
+#echo "target_bitrate:"$target_bitrate
+#echo "duration_float:"$duration_float
+#echo "source_duration:"$source_duration
 
 if [[ ! $target_bitrate -gt 0 ]];
 	then
