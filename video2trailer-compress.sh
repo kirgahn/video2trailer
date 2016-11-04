@@ -54,7 +54,7 @@ source_duration=`echo "scale=2;$duration_float"|bc`
 #### audio bitrate is defined in quality tiers, we are using q0 (64kbps)
 #### all the available quality tiers for libvorbis are available @
 #### https://en.wikipedia.org/wiki/Vorbis#Technical_details
-audio_bitrate=54
+audio_bitrate=64
 threads=4
 
 target_bitrate=$(echo $target_size*8192|bc)
@@ -62,10 +62,11 @@ target_bitrate=$(echo $target_bitrate/$source_duration|bc)
 target_bitrate=$(echo $target_bitrate-$audio_bitrate|bc)
 
 #### DEBUG info
-#echo "target_bitrate:"$target_bitrate
-#echo '$target_size:'$target_size
-#echo "duration_float:"$duration_float
-#echo "source_duration:"$source_duration
+# echo "##################################"
+# echo "target_bitrate:"$target_bitrate
+# echo '$target_size:'$target_size
+# echo "duration_float:"$duration_float
+# echo "source_duration:"$source_duration
 
 #### enable variable bitrate?
 variable_bitrate=1
@@ -79,8 +80,14 @@ if [ $variable_bitrate -eq 1 ]; then
 	#### Variable bitrate test
 	fps=25
 	res=480
-	vbitrate=$(echo $target_bitrate/1.3|bc)
+	max_ratio="1.5"
+	vbitrate=$(echo $target_bitrate/$max_ratio|bc)
 	maxrate=$(echo $vbitrate+$vbitrate*50/100|bc)
+
+#### DEBUG info
+# echo "max_ratio:"$max_ratio
+# echo "vbitrate:"$vbitrate
+# echo "maxrate:"$$maxrate
 
 	#### First pass
 	pass=1
