@@ -35,7 +35,7 @@ esac
 source_file=$1
 
 #### should we add a watermark?
-watermark=1
+watermark=0
 
 #### choose encoder
 ## VP8
@@ -62,24 +62,46 @@ target_bitrate=$(echo $target_bitrate/$source_duration|bc)
 target_bitrate=$(echo $target_bitrate-$audio_bitrate|bc)
 
 #### DEBUG info
-#echo "errore? target_bitrate:"$target_bitrate
-#echo '$target_size:'$target_size
 #echo "target_bitrate:"$target_bitrate
+#echo '$target_size:'$target_size
 #echo "duration_float:"$duration_float
 #echo "source_duration:"$source_duration
 
-if [[ ! $target_bitrate -gt 0 ]];
-	then
-		echo "target size $target_size is not enough to contain the video stream, got a negative bitrate of: $target_bitrate kbps";
-		exit 1
-fi
+#### enable variable bitrate?
+variable_bitrate=1
 
-echo "estimated video bitrate for target size " $target_size"M: "$target_bitrate"k"
-echo "output file is: " "$source_file""."$target_size"M.webm"
+if [ $variable_bitrate -eq 1 ]; then
+	#### Variable bitrate test
+	fps=20
+	res=480
+	vbitrate=$(echo $target_bitrate/1.5|bc)
+	maxrate=$(echo $vbitrate+$vbitrate*25/100|bc)
 
-if [ $watermark == 1 ]; 
-	then 
-		ffmpeg -stats -v quiet -i "$source_file" -vf drawtext="fontfile=impact: text='K': fontcolor=white: fontsize=26: alpha=0.4: shadowcolor=black: shadowx=1: shadowy=1: x=10: y=(main_h-30):" -c:v $encoder -minrate $target_bitrate"k" -maxrate $target_bitrate"k" -b:v $target_bitrate"k" -c:a libvorbis -q 0 -threads 4 "$source_file""."$target_size"M.webm";
-	else
-		ffmpeg -stats -v quiet -i "$source_file" -c:v $encoder -minrate $target_bitrate"k" -maxrate $target_bitrate"k" -b:v $target_bitrate"k" -c:a libvorbis -q 0 -threads 4 "$source_file""."$target_size"M.webm";
+	#### First pass
+	pass=1
+	ffmpeg -i "$source_file" -y -r "$fps" -codec:v "$encoder" -quality good -cpu-used 0 -b:v "$vbitrate"k -qmin 10 -qmax 42 -maxrate "$maxrate"k -bufsize 1000k -threads "$threads" -vf scale=-1:"$res" -an -pass $pass -f webm /dev/null
+
+	#### Second pass
+	pass=2
+	ffmpeg -i "$source_file" -r "$fps" -codec:v "$encoder" -quality good -cpu-used 0 -b:v "$vbitrate"k -qmin 10 -qmax 42 -maxrate "$maxrate"k -bufsize 1000k -threads "$threads" -vf scale=-1:"$res" -codec:a libvorbis -b:a "$audio_bitrate"k -pass "$pass" -threads "$threads" -f webm "$source_file".pass2."$vbitrate"-"$maxrate"k."$fps"fps.w"$res".webm;
+
+	#### Removes ffmpeg pass log
+	rm ffmpeg2pass-0.log
+else
+	#### Constant bitrate
+	if [[ ! $target_bitrate -gt 0 ]];
+		then
+			echo "target size $target_size is not enough to contain the video stream, got a negative bitrate of: $target_bitrate kbps";
+			exit 1
+	fi
+	
+	echo "estimated video bitrate for target size " $target_size"M: "$target_bitrate"k"
+	echo "output file is: " "$source_file""."$target_size"M.webm"
+	
+	if [ $watermark == 1 ]; 
+		then 
+			ffmpeg -stats -v quiet -i "$source_file" -vf drawtext="fontfile=impact: text='K': fontcolor=white: fontsize=26: alpha=0.4: shadowcolor=black: shadowx=1: shadowy=1: x=10: y=(main_h-30):" -c:v $encoder -minrate $target_bitrate"k" -maxrate $target_bitrate"k" -b:v $target_bitrate"k" -c:a libvorbis -q 0 -threads 4 "$source_file""."$target_size"M.webm";
+		else
+			ffmpeg -stats -v quiet -i "$source_file" -c:v $encoder -minrate $target_bitrate"k" -maxrate $target_bitrate"k" -b:v $target_bitrate"k" -c:a libvorbis -q 0 -threads 4 "$source_file""."$target_size"M.webm";
+	fi
 fi
