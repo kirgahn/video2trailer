@@ -54,7 +54,7 @@ source_duration=`echo "scale=2;$duration_float"|bc`
 #### audio bitrate is defined in quality tiers, we are using q0 (64kbps)
 #### all the available quality tiers for libvorbis are available @
 #### https://en.wikipedia.org/wiki/Vorbis#Technical_details
-audio_bitrate=64
+audio_bitrate=54
 threads=4
 
 target_bitrate=$(echo $target_size*8192|bc)
@@ -71,11 +71,16 @@ target_bitrate=$(echo $target_bitrate-$audio_bitrate|bc)
 variable_bitrate=1
 
 if [ $variable_bitrate -eq 1 ]; then
+	#### Removes ffmpeg pass log
+	#### needs to test for this
+	#### file to exist!!!
+	rm ffmpeg2pass-0.log
+
 	#### Variable bitrate test
-	fps=20
+	fps=25
 	res=480
-	vbitrate=$(echo $target_bitrate/1.5|bc)
-	maxrate=$(echo $vbitrate+$vbitrate*25/100|bc)
+	vbitrate=$(echo $target_bitrate/1.3|bc)
+	maxrate=$(echo $vbitrate+$vbitrate*50/100|bc)
 
 	#### First pass
 	pass=1
