@@ -5,13 +5,40 @@
 #### targeting a specific filesize 					      	##
 ##################################################################################
 
-### Parse Options ####
+#### Set some default values
 target_size=4
+variable_bitrate=1
+threads=4
+fps=24
+res=640
 
-while getopts ":s:" opt; do
+### Parse Options ####
+while getopts ":s:c:t:f:r:" opt; do
 	case $opt in
 	s)
+		#### target output filesize in MB
 		target_size=$OPTARG
+		shift $((OPTIND-1))
+		;;
+	c)
+		#### use constant bitrate instead of variable 
+		#### more precise on filesize, worse quality and optiomization
+		variable_bitrate=0
+		shift $((OPTIND-1))
+		;;
+	t)
+		#### numer of encoding threads
+		threads=$OPTARG
+		shift $((OPTIND-1))
+		;;
+	f)
+		#### FPS limit
+		fps=$OPTARG
+		shift $((OPTIND-1))
+		;;
+	r)
+		#### target resolution
+		res=$OPTARG
 		shift $((OPTIND-1))
 		;;
 	\?)
@@ -55,7 +82,6 @@ source_duration=`echo "scale=2;$duration_float"|bc`
 #### all the available quality tiers for libvorbis are available @
 #### https://en.wikipedia.org/wiki/Vorbis#Technical_details
 audio_bitrate=64
-threads=4
 
 target_bitrate=$(echo $target_size*8192|bc)
 target_bitrate=$(echo $target_bitrate/$source_duration|bc)
@@ -68,9 +94,6 @@ target_bitrate=$(echo $target_bitrate-$audio_bitrate|bc)
 # echo "duration_float:"$duration_float
 # echo "source_duration:"$source_duration
 
-#### enable variable bitrate?
-variable_bitrate=1
-
 if [ $variable_bitrate -eq 1 ]; then
 	#### Removes ffmpeg pass log
 	#### needs to test for this
@@ -78,9 +101,7 @@ if [ $variable_bitrate -eq 1 ]; then
 	rm ffmpeg2pass-0.log
 
 	#### Variable bitrate test
-	fps=18
-	res=640
-	max_ratio="2"
+	max_ratio="1.3"
 	vbitrate=$(echo $target_bitrate/$max_ratio|bc)
 	maxrate=$(echo $vbitrate+$vbitrate*25/100|bc)
 	buffer_size=$(echo $maxrate*2|bc)
