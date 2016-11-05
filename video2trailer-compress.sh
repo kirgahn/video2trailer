@@ -78,24 +78,26 @@ if [ $variable_bitrate -eq 1 ]; then
 	rm ffmpeg2pass-0.log
 
 	#### Variable bitrate test
-	fps=25
-	res=480
-	max_ratio="1.5"
+	fps=18
+	res=640
+	max_ratio="2"
 	vbitrate=$(echo $target_bitrate/$max_ratio|bc)
-	maxrate=$(echo $vbitrate+$vbitrate*50/100|bc)
+	maxrate=$(echo $vbitrate+$vbitrate*25/100|bc)
+	buffer_size=$(echo $maxrate*2|bc)
 
 #### DEBUG info
 # echo "max_ratio:"$max_ratio
 # echo "vbitrate:"$vbitrate
-# echo "maxrate:"$$maxrate
+# echo "maxrate:"$maxrate
+# echo "bufsize:"$buffer_size
 
 	#### First pass
 	pass=1
-	ffmpeg -i "$source_file" -y -r "$fps" -codec:v "$encoder" -quality good -cpu-used 0 -b:v "$vbitrate"k -qmin 10 -qmax 42 -maxrate "$maxrate"k -bufsize 1000k -threads "$threads" -vf scale=-1:"$res" -an -pass $pass -f webm /dev/null
+	ffmpeg -i "$source_file" -y -r "$fps" -codec:v "$encoder" -quality good -cpu-used 0 -b:v "$vbitrate"k -qmin 10 -qmax 42 -maxrate "$maxrate"k -bufsize "$buffer_size"k -threads "$threads" -vf scale=-1:"$res" -an -pass $pass -f webm /dev/null
 
 	#### Second pass
 	pass=2
-	ffmpeg -i "$source_file" -r "$fps" -codec:v "$encoder" -quality good -cpu-used 0 -b:v "$vbitrate"k -qmin 10 -qmax 42 -maxrate "$maxrate"k -bufsize 1000k -threads "$threads" -vf scale=-1:"$res" -codec:a libvorbis -b:a "$audio_bitrate"k -pass "$pass" -threads "$threads" -f webm "$source_file".pass2."$vbitrate"-"$maxrate"k."$fps"fps.w"$res".webm;
+	ffmpeg -i "$source_file" -r "$fps" -codec:v "$encoder" -quality good -cpu-used 0 -b:v "$vbitrate"k -qmin 10 -qmax 42 -maxrate "$maxrate"k -bufsize "$buffer_size"k -threads "$threads" -vf scale=-1:"$res" -codec:a libvorbis -b:a "$audio_bitrate"k -pass "$pass" -threads "$threads" -f webm "$source_file".pass2."$vbitrate"-"$maxrate"k."$buffer_size"k."$fps"fps.w"$res".webm;
 
 	#### Removes ffmpeg pass log
 	rm ffmpeg2pass-0.log
