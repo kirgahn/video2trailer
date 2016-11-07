@@ -13,33 +13,33 @@ fps=24
 res=640
 
 ### Parse Options ####
-while getopts ":s:c:t:f:r:" opt; do
+while getopts "s:b:ct:f:r:" opt; do
 	case $opt in
 	s)
 		#### target output filesize in MB
 		target_size=$OPTARG
-		shift $((OPTIND-1))
+		;;
+	b)
+		#### forces target bitrate, completely ignores target filesize if passed
+		target_bitrate=$OPTARG
+		ignore_target_size=1
 		;;
 	c)
 		#### use constant bitrate instead of variable 
 		#### more precise on filesize, worse quality and optiomization
 		variable_bitrate=0
-		shift $((OPTIND-1))
 		;;
 	t)
 		#### numer of encoding threads
 		threads=$OPTARG
-		shift $((OPTIND-1))
 		;;
 	f)
 		#### FPS limit
 		fps=$OPTARG
-		shift $((OPTIND-1))
 		;;
 	r)
 		#### target resolution
 		res=$OPTARG
-		shift $((OPTIND-1))
 		;;
 	\?)
 		echo "Invalid option: -$OPTARG" >&2
@@ -51,6 +51,9 @@ while getopts ":s:c:t:f:r:" opt; do
 		;;
 	esac
 done
+
+#### Moves after the options
+shift $((OPTIND-1))
 
 case $1 in
 	"")
@@ -83,9 +86,11 @@ source_duration=`echo "scale=2;$duration_float"|bc`
 #### https://en.wikipedia.org/wiki/Vorbis#Technical_details
 audio_bitrate=64
 
-target_bitrate=$(echo $target_size*8192|bc)
-target_bitrate=$(echo $target_bitrate/$source_duration|bc)
-target_bitrate=$(echo $target_bitrate-$audio_bitrate|bc)
+if [ ! $ignore_target_size ];then
+	target_bitrate=$(echo $target_size*8192|bc)
+	target_bitrate=$(echo $target_bitrate/$source_duration|bc)
+	target_bitrate=$(echo $target_bitrate-$audio_bitrate|bc)
+fi
 
 #### DEBUG info
 # echo "##################################"
@@ -114,11 +119,11 @@ if [ $variable_bitrate -eq 1 ]; then
 
 	#### First pass
 	pass=1
-	ffmpeg -i "$source_file" -y -r "$fps" -codec:v "$encoder" -quality good -cpu-used 0 -b:v "$vbitrate"k -qmin 10 -qmax 42 -maxrate "$maxrate"k -bufsize "$buffer_size"k -threads "$threads" -vf scale=-1:"$res" -an -pass $pass -f webm /dev/null
+	ffmpeg -stats -v quiet -i "$source_file" -y -r "$fps" -codec:v "$encoder" -quality good -cpu-used 0 -b:v "$vbitrate"k -qmin 10 -qmax 42 -maxrate "$maxrate"k -bufsize "$buffer_size"k -threads "$threads" -vf scale=-1:"$res" -an -pass $pass -f webm /dev/null
 
 	#### Second pass
 	pass=2
-	ffmpeg -i "$source_file" -r "$fps" -codec:v "$encoder" -quality good -cpu-used 0 -b:v "$vbitrate"k -qmin 10 -qmax 42 -maxrate "$maxrate"k -bufsize "$buffer_size"k -threads "$threads" -vf scale=-1:"$res" -codec:a libvorbis -b:a "$audio_bitrate"k -pass "$pass" -threads "$threads" -f webm "$source_file".pass2."$vbitrate"-"$maxrate"k."$buffer_size"k."$fps"fps.w"$res".webm;
+	ffmpeg -stats -v quiet -i "$source_file" -r "$fps" -codec:v "$encoder" -quality good -cpu-used 0 -b:v "$vbitrate"k -qmin 10 -qmax 42 -maxrate "$maxrate"k -bufsize "$buffer_size"k -threads "$threads" -vf scale=-1:"$res" -codec:a libvorbis -b:a "$audio_bitrate"k -pass "$pass" -threads "$threads" -f webm "$source_file".pass2."$vbitrate"-"$maxrate"k."$buffer_size"k."$fps"fps.w"$res".webm;
 
 	#### Removes ffmpeg pass log
 	rm ffmpeg2pass-0.log
