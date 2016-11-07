@@ -244,7 +244,7 @@ def write_vo(video,slices,destfile,sourcefps,fps,sourcewidth,width,bitrate,targe
 		for i in range(len(slices)):
 			(ss,se)=slices[i]
 			vo = video.subclip(ss,se)
-			#### on first encoding pass we don't resize it anymore 
+			#### on first encoding pass we don't resize the video anymore 
 			#### that'll happen on pass2 (when calling video2trailer-compress)
 			#vo = vo.resize(width=width)
 			vo_slices.append(vo)
@@ -253,6 +253,38 @@ def write_vo(video,slices,destfile,sourcefps,fps,sourcewidth,width,bitrate,targe
 		concatenate_videoclips(vo_slices,method='compose').write_videofile(destfile,bitrate=bitrate,fps=sourcefps,threads=threads)
 		vo = ""
 
+
+		confirm=input("Would you like to watch the output file (y/n)")
+		if confirm == "y" or confirm == "Y" or confirm == "":
+			xdg_open(destfile)
+
+		if int(target_size) > 0:
+			compress(destfile,target_size,fps,width,threads)
+		
+	except (ValueError, OSError) as err:
+                input("Error: {0}".format(err) + " (Press ENTER to continue)")
+
+def write_ffmpeg_vo(sourcefile,slices,destfile,sourcefps,fps,sourcewidth,width,bitrate,target_size):
+	try:
+		vo_slices = []
+		ffmpeg_command="ffmpeg -i " + "\'" + sourcefile + "\'" + " -filter_complex \""
+		for i in range(len(slices)):
+			(ss,se)=slices[i]
+			ffmpeg_command=ffmpeg_command + "[0:v]trim="+ str(ss) + ":" + str(se) + ",setpts=PTS-STARTPTS[v" + str(i) + "]; "
+			ffmpeg_command=ffmpeg_command + "[0:a]atrim="+ str(ss) + ":" + str(se) + ",asetpts=PTS-STARTPTS[a" + str(i) + "]; "
+
+		for i in range(len(slices)):
+			ffmpeg_command=ffmpeg_command + "[v" + str(i) + "][a" + str(i) + "]"
+	
+		ffmpeg_command=ffmpeg_command + "concat=n=" + str(len(slices)) + ":v=1:a=1[out]\" "
+		ffmpeg_command=ffmpeg_command + "-map \"[out]\" " + "\'" + destfile + "\'"
+		ffmpeg_command=ffmpeg_command + " " + "-threads " + str(threads)
+		print("#### ffmpeg_command: " + "\"" + ffmpeg_command + "\"")
+
+		try:
+			os.system(ffmpeg_command)
+		except OSError as err:
+			input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
 		confirm=input("Would you like to watch the output file (y/n)")
 		if confirm == "y" or confirm == "Y" or confirm == "":
@@ -420,7 +452,8 @@ def slices_menu(video,slices):
 			elif any(q in slices_choice for q in ["8","W","w"]):
 				if slices:
 					#write_vo(video,slices,destfile,fps,width,bitrate,target_size)
-					write_vo(video,slices,destfile,sourcefps,fps,sourcewidth,width,bitrate,target_size)
+					#write_vo(video,slices,destfile,sourcefps,fps,sourcewidth,width,bitrate,target_size)
+					write_ffmpeg_vo(sourcefile,slices,destfile,sourcefps,fps,sourcewidth,width,bitrate,target_size)
 				else:
 					input("No defined slice! (Press ENTER to continue)")
 			elif any(q in slices_choice for q in ["9","Q","q"]):
