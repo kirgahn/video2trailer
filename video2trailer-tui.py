@@ -15,17 +15,14 @@ parser.add_argument("sourcefile", help="Source video file", type=str)
 #parser.add_argument("-v", "--verbose", help="Print additional info", action="store_true" )
 parser.add_argument("-d", "--destfile", help="Destination video file, if unspecified append \"_trailer.webm\" to source filename", type=str)
 parser.add_argument("-f", "--fps", help="Output videofile frames per second, if empty assumes source fps", type=int)
-parser.add_argument("-w", "--width", help="Resolution width of the output file in pixels, if empty assumes 640", type=int)
-parser.add_argument("-b", "--bitrate", help="Output videofile bitrate in \"x.x\" format, if empty assumes \"1.2M\"", type=float)
+parser.add_argument("-w", "--width", help="Resolution width of the output file in pixels, if empty assumes source width", type=int)
+parser.add_argument("-b", "--bitrate", help="Output videofile bitrate in \"x.x\" format, if empty assumes \"0.6M\"", type=float)
 parser.add_argument("-t", "--threads", help="Number of threads to use when encoding", type=int)
 parser.add_argument("-s", "--targetsize", help="Target size in MB for the final compressed video", type=int)
 
 args = parser.parse_args()
-
 	
 #### Functions #####
-
-
 
 #### run video2filstrip ####
 def video2filmstrip(sourcefile):
@@ -35,9 +32,10 @@ def video2filmstrip(sourcefile):
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
 #### run video2trailer-compress ####
-def compress(destfile,target_size):
+#def compress(destfile,target_size):
+def compress(destfile,target_size,fps,width,threads):
 	try:
-		os.system("video2trailer-compress -s " + str(target_size) +  " \'" + destfile + "\'")
+		os.system("video2trailer-compress -s " + str(target_size) + " -f " + str(fps) + " -r " + str(width) + " -t " + str(threads) + " \'" + destfile + "\'")
 	except OSError as err:
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
@@ -240,17 +238,19 @@ def remove_slice(slices):
                 input("Slice position is invalid. (Press ENTER to continue)")
 	return slices
 
-def write_vo(video,slices,destfile,fps,width,bitrate,target_size):
+def write_vo(video,slices,destfile,sourcefps,fps,sourcewidth,width,bitrate,target_size):
 	try:
 		vo_slices = []
 		for i in range(len(slices)):
 			(ss,se)=slices[i]
 			vo = video.subclip(ss,se)
-			vo = vo.resize(width=width)
+			#### on first encoding pass we don't resize it anymore 
+			#### that'll happen on pass2 (when calling video2trailer-compress)
+			#vo = vo.resize(width=width)
 			vo_slices.append(vo)
 
 		### Tell MoviePy to concatenate the selected subclips that are in the slices[] array.
-		concatenate_videoclips(vo_slices,method='compose').write_videofile(destfile,bitrate=bitrate,fps=fps,threads=threads)
+		concatenate_videoclips(vo_slices,method='compose').write_videofile(destfile,bitrate=bitrate,fps=sourcefps,threads=threads)
 		vo = ""
 
 
@@ -259,7 +259,7 @@ def write_vo(video,slices,destfile,fps,width,bitrate,target_size):
 			xdg_open(destfile)
 
 		if int(target_size) > 0:
-			compress(destfile,target_size)
+			compress(destfile,target_size,fps,width,threads)
 		
 	except (ValueError, OSError) as err:
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
@@ -285,8 +285,6 @@ def write_preview(video,slices,destfile,fps,width,bitrate):
 
 		### Tell MoviePy to concatenate the selected subclips that are in the slices[] array.
 		concatenate_videoclips(vo_slices,method='compose').write_videofile(destfile,bitrate=bitrate,fps=fps,threads=threads)
-		#concatenate_videoclips(vo_slices,method='compose').write_videofile(destfile,bitrate=bitrate,fps=fps,threads=threads,ffmpeg_params=['-crf 10', '-b:v 0'])
-		#concatenate_videoclips(vo_slices,method='compose').write_videofile(destfile,bitrate=bitrate,fps=fps,threads=threads,ffmpeg_params=['-crf 10'])
 		vo = ""
 		
 		confirm=input("Would you like to watch the output file (y/n)")
@@ -421,7 +419,8 @@ def slices_menu(video,slices):
 					input("No defined slice! (Press ENTER to continue)")
 			elif any(q in slices_choice for q in ["8","W","w"]):
 				if slices:
-					write_vo(video,slices,destfile,fps,width,bitrate,target_size)
+					#write_vo(video,slices,destfile,fps,width,bitrate,target_size)
+					write_vo(video,slices,destfile,sourcefs,fps,sourcewidth,width,bitrate,target_size)
 				else:
 					input("No defined slice! (Press ENTER to continue)")
 			elif any(q in slices_choice for q in ["9","Q","q"]):
@@ -557,14 +556,19 @@ else:
 		        destfile=args.destfile
 		if not args.fps:
 		        fps=int(video.fps)
+		        sourcefps=fps
 		else:
 		        fps=args.fps
+		        sourcefps=int(video.fps)
 		if not args.width:
-		        width=640
+			width=int(video.w)
+			sourcewidth=width
 		else:
 		        width=args.width
+		        sourcewidth=int(video.w)
 		if not args.bitrate:
-		        bitrate="1.2M"
+		        bitrate="0.6M"
+		        #bitrate=int(video.bitrate)
 		else:
 		        bitrate=str(args.bitrate)+"M"
 		
