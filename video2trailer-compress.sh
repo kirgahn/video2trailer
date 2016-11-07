@@ -52,7 +52,7 @@ while getopts "s:b:ct:f:r:" opt; do
 	esac
 done
 
-#### Moves after the options
+#### Moves after the options so that it correctly gets $1
 shift $((OPTIND-1))
 
 case $1 in
@@ -101,9 +101,10 @@ fi
 
 if [ $variable_bitrate -eq 1 ]; then
 	#### Removes ffmpeg pass log
-	#### needs to test for this
-	#### file to exist!!!
-	rm ffmpeg2pass-0.log
+	if [ $(ls ffmpeg2pass-0.log) ];
+	then 
+		rm ffmpeg2pass-0.log;
+	fi
 
 	#### Variable bitrate test
 	max_ratio="1.3"
