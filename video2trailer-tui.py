@@ -265,6 +265,7 @@ def write_vo(video,slices,destfile,sourcefps,fps,sourcewidth,width,bitrate,targe
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
 def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,fps,sourcewidth,width,bitrate,target_size):
+
 	try:
 		encoder="libvpx"
 		vo_slices = []
@@ -579,6 +580,9 @@ if sourcefile.lower().endswith(('.v2t')):
 	video = VideoFileClip(sourcefile)
 	sourcewidth=int(video.w)
 	sourcefps=int(video.fps)
+
+	#### get sourcefile bitrate
+	#echo $(ffprobe -i stunning_deborah_mastronelly_ffmpeg_.webm -show_format -v quiet | sed -n 's/bit_rate=//p')/1000|bc
 
 else:
 	state_file_name=sourcefile + ".v2t"
