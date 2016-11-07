@@ -420,7 +420,7 @@ def slices_menu(video,slices):
 			elif any(q in slices_choice for q in ["8","W","w"]):
 				if slices:
 					#write_vo(video,slices,destfile,fps,width,bitrate,target_size)
-					write_vo(video,slices,destfile,sourcefs,fps,sourcewidth,width,bitrate,target_size)
+					write_vo(video,slices,destfile,sourcefps,fps,sourcewidth,width,bitrate,target_size)
 				else:
 					input("No defined slice! (Press ENTER to continue)")
 			elif any(q in slices_choice for q in ["9","Q","q"]):
@@ -539,16 +539,26 @@ if sourcefile.lower().endswith(('.v2t')):
 	state_file_name=sourcefile
 	(video,destfile,fps,width,bitrate,threads,target_size,slices) = load_state(state_file_name)
 	sourcefile=os.path.splitext(sourcefile)[0]
+
+	#### since the original resolution and fps are not saved in the 
+	#### state file, we need to open the videofile anyway
+	video = VideoFileClip(sourcefile)
+	sourcewidth=int(video.w)
+	sourcefps=int(video.fps)
+
 else:
 	state_file_name=sourcefile + ".v2t"
+	video = VideoFileClip(sourcefile)
+	sourcewidth=int(video.w)
+	sourcefps=int(video.fps)
+
 	try:
 		with open(state_file_name,encoding='utf-8'):
 			(video,destfile,fps,width,bitrate,threads,target_size,slices) = load_state(state_file_name)
 	except (ValueError, OSError):
 
-		video = VideoFileClip(sourcefile)
 		slices = []
-		
+
 		## Set default values whereas no argument was given
 		if not args.destfile:
 		        destfile=str(args.sourcefile)+'_trailer.webm'
@@ -562,13 +572,10 @@ else:
 		        sourcefps=int(video.fps)
 		if not args.width:
 			width=int(video.w)
-			sourcewidth=width
 		else:
 		        width=args.width
-		        sourcewidth=int(video.w)
 		if not args.bitrate:
 		        bitrate="0.6M"
-		        #bitrate=int(video.bitrate)
 		else:
 		        bitrate=str(args.bitrate)+"M"
 		
@@ -604,6 +611,7 @@ try:
 		print("")
 		print_separator()
 		
+
 		choice=input("# ")
 		
 		if any(q in choice for q in ["1","O","o"]):
