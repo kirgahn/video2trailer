@@ -8,6 +8,7 @@ import sys
 import argparse
 import math
 from moviepy.editor import *
+import subprocess
 
 ## Parse args
 parser = argparse.ArgumentParser()
@@ -264,12 +265,12 @@ def write_vo(video,slices,destfile,sourcefps,fps,sourcewidth,width,bitrate,targe
 	except (ValueError, OSError) as err:
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
-def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,fps,sourcewidth,width,bitrate,target_size):
+def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,fps,sourcewidth,width,sourcebitrate,bitrate,target_size):
 
 	try:
 		encoder="libvpx"
 		vo_slices = []
-		ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -codec:v " + encoder + "  -quality good -cpu-used 0 -threads " + str(threads) + " -filter_complex \""
+		ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -codec:v " + encoder + "  -quality good -cpu-used 0  -b:v " + str(sourcebitrate) + "k -qmin 10 -qmax 42 -threads " + str(threads) + " -filter_complex \""
 		for i in range(len(slices)):
 			(ss,se)=slices[i]
 			ffmpeg_command=ffmpeg_command + "[0:v]trim="+ str(ss) + ":" + str(se) + ",setpts=PTS-STARTPTS[v" + str(i) + "]; "
@@ -455,7 +456,7 @@ def slices_menu(video,slices):
 				if slices:
 					#write_vo(video,slices,destfile,fps,width,bitrate,target_size)
 					#write_vo(video,slices,destfile,sourcefps,fps,sourcewidth,width,bitrate,target_size)
-					ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,fps,sourcewidth,width,bitrate,target_size)
+					ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,fps,sourcewidth,width,sourcebitrate,bitrate,target_size)
 				else:
 					input("No defined slice! (Press ENTER to continue)")
 			elif any(q in slices_choice for q in ["9","Q","q"]):
@@ -582,13 +583,19 @@ if sourcefile.lower().endswith(('.v2t')):
 	sourcefps=int(video.fps)
 
 	#### get sourcefile bitrate
-	#echo $(ffprobe -i stunning_deborah_mastronelly_ffmpeg_.webm -show_format -v quiet | sed -n 's/bit_rate=//p')/1000|bc
+	cmd='echo $(ffprobe -i "' + sourcefile + '" -show_format -v quiet | sed -n \'s/bit_rate=//p\')/1000|bc'
+	sourcebitrate = subprocess.getoutput(cmd)
 
 else:
 	state_file_name=sourcefile + ".v2t"
 	video = VideoFileClip(sourcefile)
 	sourcewidth=int(video.w)
 	sourcefps=int(video.fps)
+
+	#### get sourcefile bitrate
+	cmd='echo $(ffprobe -i "' + sourcefile + '" -show_format -v quiet | sed -n \'s/bit_rate=//p\')/1000|bc'
+	#print("#### CMD:" + cmd)
+	sourcebitrate = subprocess.getoutput(cmd)
 
 	try:
 		with open(state_file_name,encoding='utf-8'):
