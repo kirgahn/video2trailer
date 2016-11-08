@@ -265,12 +265,12 @@ def write_vo(video,slices,destfile,sourcefps,fps,sourcewidth,width,bitrate,targe
 	except (ValueError, OSError) as err:
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
-def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,fps,sourcewidth,width,sourcebitrate,bitrate,target_size):
+def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,fps,sourcewidth,width,sourceheight,sourcebitrate,bitrate,target_size):
 
 	try:
 		encoder="libvpx"
 		vo_slices = []
-		ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -codec:v " + encoder + "  -quality good -cpu-used 0  -b:v " + str(sourcebitrate) + "k -qmin 10 -qmax 42 -threads " + str(threads) + " -filter_complex \""
+		ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -codec:v " + encoder + "  -quality good -cpu-used 0  -b:v " + str(sourcebitrate) + "k -qmin 10 -qmax 42 -s " + str(sourcewidth) + "x" + str(sourceheight) + " -threads " + str(threads) + " -filter_complex \""
 		for i in range(len(slices)):
 			(ss,se)=slices[i]
 			ffmpeg_command=ffmpeg_command + "[0:v]trim="+ str(ss) + ":" + str(se) + ",setpts=PTS-STARTPTS[v" + str(i) + "]; "
@@ -281,8 +281,7 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,fps,sourcewidth,width,s
 	
 		ffmpeg_command=ffmpeg_command + "concat=n=" + str(len(slices)) + ":v=1:a=1[out]\" "
 		ffmpeg_command=ffmpeg_command + "-map \"[out]\" " + "\'" + destfile + "\'"
-		#ffmpeg_command=ffmpeg_command + " " + "-threads " + str(threads)
-		#print("#### ffmpeg_command: " + "\"" + ffmpeg_command + "\"")
+		print("#### ffmpeg_command: " + "\"" + ffmpeg_command + "\"")
 
 		try:
 			os.system(ffmpeg_command)
@@ -456,7 +455,7 @@ def slices_menu(video,slices):
 				if slices:
 					#write_vo(video,slices,destfile,fps,width,bitrate,target_size)
 					#write_vo(video,slices,destfile,sourcefps,fps,sourcewidth,width,bitrate,target_size)
-					ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,fps,sourcewidth,width,sourcebitrate,bitrate,target_size)
+					ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,fps,sourcewidth,width,sourceheight,sourcebitrate,bitrate,target_size)
 				else:
 					input("No defined slice! (Press ENTER to continue)")
 			elif any(q in slices_choice for q in ["9","Q","q"]):
@@ -580,6 +579,7 @@ if sourcefile.lower().endswith(('.v2t')):
 	#### state file, we need to open the videofile anyway
 	video = VideoFileClip(sourcefile)
 	sourcewidth=int(video.w)
+	sourceheight=int(video.h)
 	sourcefps=int(video.fps)
 
 	#### get sourcefile bitrate
@@ -590,6 +590,7 @@ else:
 	state_file_name=sourcefile + ".v2t"
 	video = VideoFileClip(sourcefile)
 	sourcewidth=int(video.w)
+	sourceheight=int(video.h)
 	sourcefps=int(video.fps)
 
 	#### get sourcefile bitrate

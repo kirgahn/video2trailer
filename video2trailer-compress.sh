@@ -101,7 +101,7 @@ fi
 
 if [ $variable_bitrate -eq 1 ]; then
 	#### Removes ffmpeg pass log
-	if [ $(ls ffmpeg2pass-0.log) ];
+	if [ $(ls ffmpeg2pass-0.log &> /dev/null) ];
 	then 
 		rm ffmpeg2pass-0.log;
 	fi
