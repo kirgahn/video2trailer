@@ -332,9 +332,44 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,fps,sourcewidth,width,s
 #	except (ValueError, OSError) as err:
 #                input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
-def write_preview(sourcefile,slices,destfile,fps,width,bitrate):
-	print("STUB!!!")
+def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
+	ext="mp4"
+	encoder="libx264" ### either x264/mp4 or libvpx/webm
+	opts="-cpu-used 8 -threads " + str(threads)
 	#ffmpeg -i videoplayback.mp4 -filter_complex "drawtext=fontsize=50:fontcolor=black:fontfile=arial.ttf:text=yoyo[out]" -map "[out]" -f webm -cpu-used 8 -threads 4  drawtext.webm
+	#try:
+	vo_slices = []
+	for i in range(len(slices)):
+		(ss,se)=slices[i]
+		#ffmpeg -stats -v quiet 
+		cmd="ffmpeg -stats -v quiet -i " + sourcefile + " -y -codec:v " + encoder + " -b:v " + str(bitrate) + " -s " + str(width) + "x" + str(height) + " -threads " + str(threads) + " -filter_complex \"[0:v]trim="+ str(ss) 	+ ":" + str(se) + ",setpts=PTS-STARTPTS[todraw];[todraw]drawtext=fontsize=50:fontcolor=black:fontfile=arial.ttf:text=" + str(i) + "[out]\" -map \"[out]\" -f " + ext + " " + opts + " " + destfile + "_" + str(i) + "." + ext  
+
+		#DEBUG
+		print(cmd)
+		print("Encoding tmp file #" + str(i) + " \"" + destfile + "_" + str(i) + "." + ext+ "\"")
+		subprocess.call(cmd,shell=True)
+	
+	cmd="ffmpeg -stats -v quiet -i \"concat:"
+	for i in range(len(slices)):
+		cmd=cmd + destfile + "_" + str(i) + "." + ext + "|"
+		#### let's remove the last character added since it's uneeded after the last filename
+		cmd=cmd[:-1]
+		cmd=cmd + "\" -c copy -a copy " + destfile + "." + ext
+
+		### DEBUG 
+		print(cmd)
+		print("Encoding tmp file #" + str(i) + " \"" + destfile + "_" + str(i) + "." + ext+ "\"")
+		subprocess.call(cmd,shell=True)
+
+	confirm=input("Would you like to watch the output file (y/n)")
+	if confirm == "y" or confirm == "Y" or confirm == "":
+		xdg_open(destfile + "." + ext)
+		input("press enter to resume editing")
+	os.system("rm" +  destfile + "_*." + ext)
+	os.system("rm" + " " + "\'" + destfile + "." + ext + "\'" )
+
+#	except (ValueError, OSError) as err:
+#                input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
 def change_settings(destfile,fps,width,bitrate,threads,target_size):
 	try:
@@ -443,7 +478,7 @@ def slices_menu(sourcefile,slices):
 						subslice=[]
 						subslice.append(slices[which_slice])
 						tempfile=destfile+str(random.randint(0,1024))+".webm"
-						write_preview(video,subslice,tempfile,20,320,"0.5M")
+						write_preview(sourcefile,subslice,tempfile,20,240,320,"0.5M",threads)
 					except (ValueError, OSError) as err:
 				                input("Error: {0}".format(err) + " (Press ENTER to continue)")
 				else:
@@ -452,7 +487,7 @@ def slices_menu(sourcefile,slices):
 				if slices:
 					try:
 						tempfile=destfile+str(random.randint(0,1024))+".webm"
-						write_preview(video,slices,tempfile,20,320,"0.5M")
+						write_preview(sourcefile,slices,tempfile,20,240,320,"0.5M",threads)
 					except (ValueError, OSError) as err:
 				                input("Error: {0}".format(err) + " (Press ENTER to continue)")
 				else:
