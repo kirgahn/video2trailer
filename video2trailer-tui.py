@@ -37,6 +37,7 @@ def video2filmstrip(sourcefile):
 #def compress(destfile,target_size):
 def compress(destfile,target_size,fps,width,threads):
 	try:
+		print("targetfile: " + destfile)
 		os.system("video2trailer-compress -s " + str(target_size) + " -f " + str(fps) + " -r " + str(width) + " -t " + str(threads) + " \'" + destfile + "\'")
 	except OSError as err:
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
@@ -268,11 +269,17 @@ def remove_slice(slices):
 #                input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
 def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,fps,sourcewidth,width,sourceheight,sourcebitrate,bitrate,target_size):
-
 	try:
+		#### encoder = either libx264 or libvpx
 		encoder="libvpx"
 		vo_slices = []
+
+		#### with libvpx options
 		ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -codec:v " + encoder + "  -quality good -cpu-used 0  -b:v " + str(sourcebitrate) + "k -qmin 10 -qmax 42 -s " + str(sourcewidth) + "x" + str(sourceheight) + " -threads " + str(threads) + " -filter_complex \""
+
+		#### with libx264 options
+		#### ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -codec:v " + encoder + " -b:v " + str(sourcebitrate) + "k -qmin 10 -qmax 42 -s " + str(sourcewidth) + "x" + str(sourceheight) + " -threads " + str(threads) + " -filter_complex \""
+
 		for i in range(len(slices)):
 			(ss,se)=slices[i]
 			ffmpeg_command=ffmpeg_command + "[0:v]trim="+ str(ss) + ":" + str(se) + ",setpts=PTS-STARTPTS[v" + str(i) + "]; "
@@ -333,6 +340,7 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,fps,sourcewidth,width,s
 #                input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
 def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
+
 	ext="mp4"
 	encoder="libx264" ### either x264/mp4 or libvpx/webm
 	opts="-cpu-used 8 -threads " + str(threads)
@@ -345,8 +353,8 @@ def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
 		cmd="ffmpeg -stats -v quiet -i " + sourcefile + " -y -codec:v " + encoder + " -b:v " + str(bitrate) + " -s " + str(width) + "x" + str(height) + " -threads " + str(threads) + " -filter_complex \"[0:v]trim="+ str(ss) 	+ ":" + str(se) + ",setpts=PTS-STARTPTS[todraw];[todraw]drawtext=fontsize=50:fontcolor=black:fontfile=arial.ttf:text=" + str(i) + "[out]\" -map \"[out]\" -f " + ext + " " + opts + " " + destfile + "_" + str(i) + "." + ext  
 
 		#DEBUG
-		print(cmd)
-		print("Encoding tmp file #" + str(i) + " \"" + destfile + "_" + str(i) + "." + ext+ "\"")
+		#print(cmd)
+		print("Encoding tmp file #" + str(i) + ": \"" + destfile + "_" + str(i) + "." + ext+ "\"")
 		subprocess.call(cmd,shell=True)
 	
 	cmd="ffmpeg -stats -v quiet -i \"concat:"
@@ -494,9 +502,14 @@ def slices_menu(sourcefile,slices):
 					input("No defined slice! (Press ENTER to continue)")
 			elif any(q in slices_choice for q in ["8","W","w"]):
 				if slices:
-					#write_vo(video,slices,destfile,fps,width,bitrate,target_size)
-					#write_vo(video,slices,destfile,sourcefps,fps,sourcewidth,width,bitrate,target_size)
-					ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,fps,sourcewidth,width,sourceheight,sourcebitrate,bitrate,target_size)
+					#### legacy call: write_vo(video,slices,destfile,sourcefps,fps,sourcewidth,width,bitrate,target_size)
+					#### targetfile is destfile less the file extension (fir thing after "." starting from 
+					#### the right plus resolution and extension: "_WIDTHxHEIGHT.webm"
+					#### ext= either .mp4 or .webm
+					ext=".webm" #either .mp4 or .webm
+					targetfile=destfile.rsplit( "." ,1 )[0]+"_"+str(sourcewidth)+"x"+str(sourceheight)+ext
+					print("targetfile: " +targetfile)
+					ffmpeg_write_vo(sourcefile,slices,targetfile,sourcefps,fps,sourcewidth,width,sourceheight,sourcebitrate,bitrate,target_size)
 				else:
 					input("No defined slice! (Press ENTER to continue)")
 			elif any(q in slices_choice for q in ["9","Q","q"]):
@@ -613,7 +626,6 @@ def parse_ffprobe_info(sourcefile):
 	#### therefre we look for the position of the first video stream
 	for i  in range(len(j['streams'])):
 	        codec_type=j['streams'][i]['codec_type']
-	        print(codec_type)
 	        if codec_type=='video':
 	                video_stream_pos=i
 	
