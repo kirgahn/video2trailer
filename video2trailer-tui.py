@@ -350,7 +350,7 @@ def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
 	for i in range(len(slices)):
 		(ss,se)=slices[i]
 		#ffmpeg -stats -v quiet 
-		cmd="ffmpeg -stats -v quiet -i " + sourcefile + " -y -codec:v " + encoder + " -b:v " + str(bitrate) + " -s " + str(width) + "x" + str(height) + " -threads " + str(threads) + " -filter_complex \"[0:v]trim="+ str(ss) 	+ ":" + str(se) + ",setpts=PTS-STARTPTS[todraw];[todraw]drawtext=fontsize=50:fontcolor=black:fontfile=arial.ttf:text=" + str(i) + "[out]\" -map \"[out]\" -f " + ext + " " + opts + " " + destfile + "_" + str(i) + "." + ext  
+		cmd="ffmpeg -stats -v quiet -i \'" + sourcefile + "\' -y -codec:v " + encoder + " -b:v " + str(bitrate) + " -s " + str(width) + "x" + str(height) + " -threads " + str(threads) + " -filter_complex \"[0:v]trim="+ str(ss) 	+ ":" + str(se) + ",setpts=PTS-STARTPTS[todraw];[todraw]drawtext=fontsize=50:fontcolor=black:fontfile=arial.ttf:text=" + str(i) + "[out]\" -map \"[out]\" -f " + ext + " " + opts + " " + destfile + "_" + str(i) + "." + ext  
 
 		#DEBUG
 		#print(cmd)
@@ -619,7 +619,8 @@ def save_state(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices)
 
 def parse_ffprobe_info(sourcefile):
 	#### Ask ffmpeg to provide a json with info about the video that we're going to parse
-	stream_info = subprocess.getoutput('ffprobe -v quiet -print_format json -show_format -show_streams ' + sourcefile)
+	stream_info = subprocess.getoutput('ffprobe -v quiet -print_format json -show_format -show_streams \'' + sourcefile + "\'")
+	print(stream_info)
 	j = json.loads(stream_info)
 	
 	#### ['streams'] is an array that includes audio and video streams
