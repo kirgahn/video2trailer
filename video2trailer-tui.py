@@ -37,7 +37,7 @@ def video2filmstrip(sourcefile):
 #def compress(destfile,target_size):
 def compress(destfile,target_size,fps,width,threads):
 	try:
-		print("targetfile: " + destfile)
+		print("Rencoding at selected quality, please wait...")
 		os.system("video2trailer-compress -s " + str(target_size) + " -f " + str(fps) + " -r " + str(width) + " -t " + str(threads) + " \'" + destfile + "\'")
 	except OSError as err:
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
