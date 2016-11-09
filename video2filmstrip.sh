@@ -51,7 +51,7 @@ do
 			frametime=`echo $i*$timegap|bc` 
 
 	fi
-	ffmpeg -v 0 -ss $frametime -y -i "$1" -t 1 -s 320x240 -f image2 _tmp$i.jpg; 
+	ffmpeg -v 0 -ss $frametime -y -i "$1" -t 1 -s 320x180 -f image2 _tmp$i.jpg; 
 
 ################################################
 ## Convert time to an understandable format   ##
