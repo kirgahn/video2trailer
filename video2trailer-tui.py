@@ -8,7 +8,6 @@ import sys
 import argparse
 import json
 import math
-#from moviepy.editor import *
 import subprocess
 
 ## Parse args
@@ -34,7 +33,6 @@ def video2filmstrip(sourcefile):
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
 #### run video2trailer-compress ####
-#def compress(destfile,target_size):
 def compress(destfile,target_size,fps,width,threads):
 	try:
 		print("Rencoding at selected quality, please wait...")
@@ -86,9 +84,7 @@ def print_separator():
 	print("=" * columns)
 
 #### generate random slices ####
-#def generate_slices(video):
 def generate_slices(sourceduration):
-	# Initialize some variables - "steps" are slices position in percentage, where the overall source lenght is 100%
 	slices = []
 
 	try:
@@ -104,7 +100,6 @@ def generate_slices(sourceduration):
 		s=1
 		n=1
 		
-		#while n <= cycles and ((int(prevpos))+sliceduration < int(video.duration)):
 		while n <= cycles and ((int(prevpos))+sliceduration < int(sourceduration)):
 			s = random.randint(prevpos+sliceduration,round(int(sourceduration)/100*(n*step)))
 			prevpos = s
@@ -166,7 +161,6 @@ def add_slice(slices,sourceduration):
 		print("Please insert end time for the new subclip (hh:mm:ss)")
 		se=convert_to_seconds(input("#"))
 
-		#if (ss < round(video.duration)) and (se < round(video.duration)):
 		if (ss < round(sourceduration)) and (se < round(sourceduration)):
 			slices.append([ss,se])
 		else:
@@ -243,32 +237,6 @@ def remove_slice(slices):
                 input("Slice position is invalid. (Press ENTER to continue)")
 	return slices
 
-#def write_vo(video,slices,destfile,sourcefps,fps,sourcewidth,width,bitrate,target_size):
-#	try:
-#		vo_slices = []
-#		for i in range(len(slices)):
-#			(ss,se)=slices[i]
-#			vo = video.subclip(ss,se)
-#			#### on first encoding pass we don't resize the video anymore 
-#			#### that'll happen on pass2 (when calling video2trailer-compress)
-#			#vo = vo.resize(width=width)
-#			vo_slices.append(vo)
-#
-#		### Tell MoviePy to concatenate the selected subclips that are in the slices[] array.
-#		concatenate_videoclips(vo_slices,method='compose').write_videofile(destfile,bitrate=bitrate,fps=sourcefps,threads=threads)
-#		vo = ""
-#
-#
-#		confirm=input("Would you like to watch the output file (y/n)")
-#		if confirm == "y" or confirm == "Y" or confirm == "":
-#			xdg_open(destfile)
-#
-#		if int(target_size) > 0:
-#			compress(destfile,target_size,fps,width,threads)
-#		
-#	except (ValueError, OSError) as err:
-#                input("Error: {0}".format(err) + " (Press ENTER to continue)")
-
 def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,fps,sourcewidth,width,sourceheight,sourcebitrate,bitrate,target_size):
 	try:
 		#### encoder = either libx264 or libvpx
@@ -277,9 +245,6 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,fps,sourcewidth,width,s
 
 		#### with libvpx options
 		ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -codec:v " + encoder + "  -quality good -cpu-used 0  -b:v " + str(sourcebitrate) + "k -qmin 10 -qmax 42 -s " + str(sourcewidth) + "x" + str(sourceheight) + " -threads " + str(threads) + " -filter_complex \""
-
-		#### with libx264 options
-		#### ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -codec:v " + encoder + " -b:v " + str(sourcebitrate) + "k -qmin 10 -qmax 42 -s " + str(sourcewidth) + "x" + str(sourceheight) + " -threads " + str(threads) + " -filter_complex \""
 
 		for i in range(len(slices)):
 			(ss,se)=slices[i]
@@ -308,38 +273,6 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,fps,sourcewidth,width,s
 	except (ValueError, OSError) as err:
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
-#def write_preview(video,slices,destfile,fps,width,bitrate):
-#	try:
-#		vo_slices = []
-#		for i in range(len(slices)):
-#			(ss,se)=slices[i]
-#			subclip = video.subclip(ss,se)
-#
-#			txt_clip = TextClip(str(i),fontsize=30,color='black',stroke_color='black',stroke_width=2)
-#			if int(subclip.duration) < 2:
-#				txt_clip = txt_clip.set_pos(('left','top')).set_duration(1)
-#			elif int(subclip.duration) < 3:
-#				txt_clip = txt_clip.set_pos(('left','top')).set_duration(2)
-#			else:
-#				txt_clip = txt_clip.set_pos(('left','top')).set_duration(3)
-#
-#			subclip = subclip.resize(width=width)
-#			vo = CompositeVideoClip([subclip, txt_clip])
-#			vo_slices.append(vo)
-#
-#		### Tell MoviePy to concatenate the selected subclips that are in the slices[] array.
-#		concatenate_videoclips(vo_slices,method='compose').write_videofile(destfile,bitrate=bitrate,fps=fps,threads=threads)
-#		vo = ""
-#		
-#		confirm=input("Would you like to watch the output file (y/n)")
-#		if confirm == "y" or confirm == "Y" or confirm == "":
-#			xdg_open(destfile)
-#			input("press enter to resume editing")
-#		os.system("rm" + " " + "\'" + destfile + "\'" )
-#
-#	except (ValueError, OSError) as err:
-#                input("Error: {0}".format(err) + " (Press ENTER to continue)")
-
 def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
 
 	ext="mp4"
@@ -347,36 +280,12 @@ def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
 	encoder="libvpx" ### either x264/mp4 or libvpx/webm
 	font="DejaVuSans-Bold.ttf"
 	fontsize=100
-	opts="-cpu-used 8 -threads " + str(threads)
-	#ffmpeg -i videoplayback.mp4 -filter_complex "drawtext=fontsize=50:fontcolor=black:fontfile=arial.ttf:text=yoyo[out]" -map "[out]" -f webm -cpu-used 8 -threads 4  drawtext.webm
+	opts=" -cpu-used 8 -threads " + str(threads)
 	#try:
 	vo_slices = []
 
-#	for i in range(len(slices)):
-#		(ss,se)=slices[i]
-#		#ffmpeg -stats -v quiet 
-#		cmd="ffmpeg -stats -v quiet -i \'" + sourcefile + "\' -y -codec:v " + encoder + " -b:v " + str(bitrate) + " -s " + str(width) + "x" + str(height) + " -threads " + str(threads) + " -filter_complex \"[0:v]trim="+ str(ss) 	+ ":" + str(se) + ",setpts=PTS-STARTPTS[todraw];[todraw]drawtext=fontsize=50:fontcolor=black:fontfile=arial.ttf:text=" + str(i) + "[out]\" -map \"[out]\" -f " + ext + " " + opts + " " + destfile + "_" + str(i) + "." + ext  
-#
-#		#DEBUG
-#		#print(cmd)
-#		print("Encoding tmp file #" + str(i) + ": \"" + destfile + "_" + str(i) + "." + ext+ "\"")
-#		subprocess.call(cmd,shell=True)
-#	
-#	cmd="ffmpeg -stats -v quiet -i \"concat:"
-#	for i in range(len(slices)):
-#		cmd=cmd + destfile + "_" + str(i) + "." + ext + "|"
-#		#### let's remove the last character added since it's uneeded after the last filename
-#		cmd=cmd[:-1]
-#		cmd=cmd + "\" -c copy -a copy " + destfile + "." + ext
-#
-#		### DEBUG 
-#		print(cmd)
-#		print("Encoding tmp file #" + str(i) + " \"" + destfile + "_" + str(i) + "." + ext+ "\"")
-#		subprocess.call(cmd,shell=True)
-
 	print("Encoding tmp file: \"" + destfile + "\"")
-# 	"ffmpeg -stats -v quiet -i \"concat:"
-	ffmpeg_command="ffmpeg -stats -v quiet -i \'" + sourcefile + "\' -y -codec:v " + encoder + " -b:v " + str(bitrate) + " -s " + str(width) + "x" + str(height) + " -threads " + str(threads) + " -filter_complex \""
+	ffmpeg_command="ffmpeg -stats -v quiet -i \'" + sourcefile + "\' -y -codec:v " + encoder + " -b:v " + str(bitrate) + " -s " + str(width) + "x" + str(height) + opts + " -filter_complex \""
 	for i in range(len(slices)):
 		(ss,se)=slices[i]
 		ffmpeg_command=ffmpeg_command + "[0:v]trim="+ str(ss) + ":" + str(se) + ",setpts=PTS-STARTPTS[todraw" + str(i) + "]; "
@@ -394,12 +303,16 @@ def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
 #	### DEBUG 
 #	print(ffmpeg_command)
 
-	confirm=input("Would you like to watch the output file (y/n)")
-	if confirm == "y" or confirm == "Y" or confirm == "":
-		xdg_open(destfile)
-		input("press enter to resume editing")
-	os.system("rm" +  destfile)
-#	os.system("rm" + " " + "\'" + destfile + "." + ext + "\'" )
+	print("(p) to watch the preview file, (q) to resume editing ")
+	while True:
+		confirm=input("")
+		if confirm == "p" or confirm == "P" or confirm == "":
+			xdg_open(destfile)
+			#input("press enter to resume editing")
+		elif confirm == "q" or confirm == "Q":
+			break
+			
+	os.system("rm " +  destfile)
 
 #	except (ValueError, OSError) as err:
 #                input("Error: {0}".format(err) + " (Press ENTER to continue)")
@@ -511,7 +424,7 @@ def slices_menu(sourcefile,slices):
 						subslice=[]
 						subslice.append(slices[which_slice])
 						tempfile=destfile+str(random.randint(0,1024))+".webm"
-						write_preview(sourcefile,subslice,tempfile,20,240,320,"0.5M",threads)
+						write_preview(sourcefile,subslice,tempfile,20,180,320,"0.2M",threads)
 					except (ValueError, OSError) as err:
 				                input("Error: {0}".format(err) + " (Press ENTER to continue)")
 				else:
@@ -520,15 +433,14 @@ def slices_menu(sourcefile,slices):
 				if slices:
 					try:
 						tempfile=destfile+str(random.randint(0,1024))+".webm"
-						write_preview(sourcefile,slices,tempfile,20,240,320,"0.5M",threads)
+						write_preview(sourcefile,slices,tempfile,20,180,320,"0.2M",threads)
 					except (ValueError, OSError) as err:
 				                input("Error: {0}".format(err) + " (Press ENTER to continue)")
 				else:
 					input("No defined slice! (Press ENTER to continue)")
 			elif any(q in slices_choice for q in ["8","W","w"]):
 				if slices:
-					#### legacy call: write_vo(video,slices,destfile,sourcefps,fps,sourcewidth,width,bitrate,target_size)
-					#### targetfile is destfile less the file extension (fir thing after "." starting from 
+					#### targetfile is destfile less the file extension (first thing after "." starting from 
 					#### the right plus resolution and extension: "_WIDTHxHEIGHT.webm"
 					#### ext= either .mp4 or .webm
 					ext=".webm" #either .mp4 or .webm
@@ -550,22 +462,22 @@ def load_state(state_file_name):
 
 	try:
 		with open(state_file_name, encoding='utf-8') as state_file:
-			## skip first two lines
+			#### skip first two lines
 			state_file.readline().strip()
 			state_file.readline().strip()
-			## the third line is to ignore the legacy video variable
+			#### the third line is to ignore the legacy "video" variable
+			#### it may be reused in the future
 			state_file.readline().strip()
-				
 			#video = VideoFileClip(state_file.readline().rstrip())
+				
 			destfile = state_file.readline().rstrip()
 			fps = int(state_file.readline().rstrip())
-			#bitrate = (state_file.readline().rstrip() + "M")
 			bitrate = (state_file.readline().rstrip())
 			width = int(state_file.readline().rstrip())
 			threads = int(state_file.readline().rstrip())
 			target_size = int(state_file.readline().rstrip())
 			
-			## skip three lines
+			#### skip three lines
 			state_file.readline().rstrip()
 			state_file.readline().rstrip()
 			state_file.readline().rstrip()
@@ -577,7 +489,6 @@ def load_state(state_file_name):
 				se=convert_to_seconds(slice_line.split('-')[1])
 				slices.append([ss,se])
 
-		#return (video,destfile,fps,width,bitrate,threads,target_size,slices)
 		return (destfile,fps,width,bitrate,threads,target_size,slices)
 
 	except (ValueError, OSError) as err:
@@ -618,7 +529,6 @@ def save_state(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices)
 				state_file.write(str(ss)+"-"+str(se)+"\n")
 				line_number += 1
 
-		#return (video,destfile,fps,width,bitrate,threads,slices)
 		input("State saved correctly (Press ENTER to continue)")
 
 	except (ValueError, OSError) as err:
@@ -680,16 +590,11 @@ if sourcefile.lower().endswith(('.v2t')):
 
 else:
 	state_file_name=sourcefile + ".v2t"
-	#video = VideoFileClip(sourcefile)
-	#sourcewidth=int(video.w)
-	#sourceheight=int(video.h)
-	#sourcefps=int(video.fps)
 
 	(sourcewidth,sourceheight,sourcefps,sourcebitrate,sourceduration)=parse_ffprobe_info(sourcefile)
 
 	try:
 		with open(state_file_name,encoding='utf-8'):
-			#(video,destfile,fps,width,bitrate,threads,target_size,slices) = load_state(state_file_name)
 			(destfile,fps,width,bitrate,threads,target_size,slices) = load_state(state_file_name)
 	except (ValueError, OSError):
 
@@ -725,7 +630,6 @@ else:
 
 
 ## MAIN LOOP BEGINS HERE
-#subclip_num=1
 quit_loop=False
 
 try:
@@ -737,11 +641,9 @@ try:
 		print("1) (O)pen with default media player")
 		print("2) (F)ilmstrip")
 		print("3) (E)dit clip")
-		#print("4) Write destination file")
 		print("4) (C)hange settings")
 		print("5) (S)ave state file")
-		print("6) co(M)press destination file")
-		print("7) (Q)uit")
+		print("6) (Q)uit")
 		print("")
 		print_separator()
 		
@@ -759,13 +661,10 @@ try:
 			(destfile,fps,width,bitrate,threads,target_size) = change_settings(destfile,fps,width,bitrate,threads,target_size)
 		elif any(q in choice for q in ["5","S","s"]):
 			save_state(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices)
-		elif any(q in choice for q in ["6","M","m"]):
-			compress(destfile)
-		elif any(q in choice for q in ["7","Q","q"]):
+		elif any(q in choice for q in ["6","Q","q"]):
 			os.system('cls||clear')
 			quit_loop=True
 except KeyboardInterrupt:
-			#video = ""
 			os.system('cls||clear')
 			sys.exit()
 except (ValueError, OSError) as err:
