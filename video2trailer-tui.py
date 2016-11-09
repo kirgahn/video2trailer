@@ -110,7 +110,13 @@ def generate_slices(sourceduration):
 		print("Error: {0}".format(err))
 		input("Duration values can only be expressed in integers. (Press ENTER to continue)")
 
-
+def print_duration(slices):
+	total_duration=0
+	for i in range(len(slices)):
+		(ss,se)=slices[i]
+		diff=se-ss
+		total_duration=total_duration+diff
+	print("Total video lenght: " + str(convert_to_minutes(total_duration)) )
 	
 def print_slices(slices):
 	(columns,rows)=os.get_terminal_size()
@@ -198,7 +204,7 @@ def insert_slice(slices,sourceduration):
 
 	return slices
 
-def change_slice(slices):
+def change_slice(slices,sourceduration):
 	try:
 		print("Which slice would you like to change?")
 		change_index=int(input("#"))
@@ -385,6 +391,7 @@ def slices_menu(sourcefile,slices):
 			print_separator()
 			
 			if slices:
+				print_duration(slices)
 				print_slices(slices)
 	
 	
