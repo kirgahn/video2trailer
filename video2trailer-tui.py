@@ -8,7 +8,7 @@ import sys
 import argparse
 import json
 import math
-from moviepy.editor import *
+#from moviepy.editor import *
 import subprocess
 
 ## Parse args
@@ -42,9 +42,10 @@ def compress(destfile,target_size,fps,width,threads):
 	except OSError as err:
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
-	confirm=input("Would you like to watch the output file (y/n)")
-	if confirm == "y" or confirm == "Y" or confirm == "":
-		xdg_open(destfile+"."+str(target_size)+"M.webm")
+	#confirm=input("Would you like to watch the output file (y/n)")
+	#if confirm == "y" or confirm == "Y" or confirm == "":
+	#	xdg_open(destfile+"."+str(target_size)+"M.webm")
+	input("Encoding completed (Press ENTER to continue)")
 
 #### open sourcefile with default player ####
 def xdg_open(sourcefile):
@@ -342,39 +343,63 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,fps,sourcewidth,width,s
 def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
 
 	ext="mp4"
-	encoder="libx264" ### either x264/mp4 or libvpx/webm
+	#encoder="libx264" ### either x264/mp4 or libvpx/webm
+	encoder="libvpx" ### either x264/mp4 or libvpx/webm
+	font="DejaVuSans-Bold.ttf"
+	fontsize=100
 	opts="-cpu-used 8 -threads " + str(threads)
 	#ffmpeg -i videoplayback.mp4 -filter_complex "drawtext=fontsize=50:fontcolor=black:fontfile=arial.ttf:text=yoyo[out]" -map "[out]" -f webm -cpu-used 8 -threads 4  drawtext.webm
 	#try:
 	vo_slices = []
+
+#	for i in range(len(slices)):
+#		(ss,se)=slices[i]
+#		#ffmpeg -stats -v quiet 
+#		cmd="ffmpeg -stats -v quiet -i \'" + sourcefile + "\' -y -codec:v " + encoder + " -b:v " + str(bitrate) + " -s " + str(width) + "x" + str(height) + " -threads " + str(threads) + " -filter_complex \"[0:v]trim="+ str(ss) 	+ ":" + str(se) + ",setpts=PTS-STARTPTS[todraw];[todraw]drawtext=fontsize=50:fontcolor=black:fontfile=arial.ttf:text=" + str(i) + "[out]\" -map \"[out]\" -f " + ext + " " + opts + " " + destfile + "_" + str(i) + "." + ext  
+#
+#		#DEBUG
+#		#print(cmd)
+#		print("Encoding tmp file #" + str(i) + ": \"" + destfile + "_" + str(i) + "." + ext+ "\"")
+#		subprocess.call(cmd,shell=True)
+#	
+#	cmd="ffmpeg -stats -v quiet -i \"concat:"
+#	for i in range(len(slices)):
+#		cmd=cmd + destfile + "_" + str(i) + "." + ext + "|"
+#		#### let's remove the last character added since it's uneeded after the last filename
+#		cmd=cmd[:-1]
+#		cmd=cmd + "\" -c copy -a copy " + destfile + "." + ext
+#
+#		### DEBUG 
+#		print(cmd)
+#		print("Encoding tmp file #" + str(i) + " \"" + destfile + "_" + str(i) + "." + ext+ "\"")
+#		subprocess.call(cmd,shell=True)
+
+	print("Encoding tmp file: \"" + destfile + "\"")
+# 	"ffmpeg -stats -v quiet -i \"concat:"
+	ffmpeg_command="ffmpeg -stats -v quiet -i \'" + sourcefile + "\' -y -codec:v " + encoder + " -b:v " + str(bitrate) + " -s " + str(width) + "x" + str(height) + " -threads " + str(threads) + " -filter_complex \""
 	for i in range(len(slices)):
 		(ss,se)=slices[i]
-		#ffmpeg -stats -v quiet 
-		cmd="ffmpeg -stats -v quiet -i \'" + sourcefile + "\' -y -codec:v " + encoder + " -b:v " + str(bitrate) + " -s " + str(width) + "x" + str(height) + " -threads " + str(threads) + " -filter_complex \"[0:v]trim="+ str(ss) 	+ ":" + str(se) + ",setpts=PTS-STARTPTS[todraw];[todraw]drawtext=fontsize=50:fontcolor=black:fontfile=arial.ttf:text=" + str(i) + "[out]\" -map \"[out]\" -f " + ext + " " + opts + " " + destfile + "_" + str(i) + "." + ext  
-
-		#DEBUG
-		#print(cmd)
-		print("Encoding tmp file #" + str(i) + ": \"" + destfile + "_" + str(i) + "." + ext+ "\"")
-		subprocess.call(cmd,shell=True)
+		ffmpeg_command=ffmpeg_command + "[0:v]trim="+ str(ss) + ":" + str(se) + ",setpts=PTS-STARTPTS[todraw" + str(i) + "]; "
+		ffmpeg_command=ffmpeg_command + "[todraw" + str(i) + "]drawtext=fontsize="+ str(fontsize) + ":fontcolor=black:fontfile=" + font + ":text=" + str(i) + "[v" + str(i) + "]; "
+		ffmpeg_command=ffmpeg_command + "[0:a]atrim="+ str(ss) + ":" + str(se) + ",asetpts=PTS-STARTPTS[a" + str(i) + "]; "
 	
-	cmd="ffmpeg -stats -v quiet -i \"concat:"
 	for i in range(len(slices)):
-		cmd=cmd + destfile + "_" + str(i) + "." + ext + "|"
-		#### let's remove the last character added since it's uneeded after the last filename
-		cmd=cmd[:-1]
-		cmd=cmd + "\" -c copy -a copy " + destfile + "." + ext
+		ffmpeg_command=ffmpeg_command + "[v" + str(i) + "][a" + str(i) + "]"
+	
+	ffmpeg_command=ffmpeg_command + "concat=n=" + str(len(slices)) + ":v=1:a=1[out]\" "
+	ffmpeg_command=ffmpeg_command + "-map \"[out]\" " + "\'" + destfile + "\'"
 
-		### DEBUG 
-		print(cmd)
-		print("Encoding tmp file #" + str(i) + " \"" + destfile + "_" + str(i) + "." + ext+ "\"")
-		subprocess.call(cmd,shell=True)
+	subprocess.call(ffmpeg_command,shell=True)
+
+#	### DEBUG 
+#	print(ffmpeg_command)
 
 	confirm=input("Would you like to watch the output file (y/n)")
 	if confirm == "y" or confirm == "Y" or confirm == "":
-		xdg_open(destfile + "." + ext)
+		xdg_open(destfile)
 		input("press enter to resume editing")
-	os.system("rm" +  destfile + "_*." + ext)
-	os.system("rm" + " " + "\'" + destfile + "." + ext + "\'" )
+	os.system("rm" +  destfile)
+#	os.system("rm" + " " + "\'" + destfile + "." + ext + "\'" )
 
 #	except (ValueError, OSError) as err:
 #                input("Error: {0}".format(err) + " (Press ENTER to continue)")
