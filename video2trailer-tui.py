@@ -118,9 +118,13 @@ def print_duration(slices):
 		total_duration=total_duration+diff
 	print("Total video lenght: " + str(convert_to_minutes(total_duration)) )
 	
-def print_slices(slices):
+def print_slices(slices,show_info):
 	(columns,rows)=os.get_terminal_size()
-	menu_rows=20
+	if show_info:
+		menu_rows=23
+	else:
+		menu_rows=20
+
 	available_rows=int(rows)-menu_rows
 	slice_columns=math.ceil(len(slices)/available_rows)
 	slices_per_column=math.ceil(len(slices)/slice_columns)
@@ -507,7 +511,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 			
 			if slices:
 				print_duration(slices)
-				print_slices(slices)
+				print_slices(slices,show_info)
 	
 	
 			slices_choice=input("# ")
