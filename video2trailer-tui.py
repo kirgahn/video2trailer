@@ -586,7 +586,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 title = "|| video2trailer ||"
 #player="xdg-open"
 #player="vlc"
-player="mplayer"
+player="mplayer -osd-fractions 1"
 
 sourcefile = args.sourcefile
 
