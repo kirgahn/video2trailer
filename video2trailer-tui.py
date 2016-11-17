@@ -471,8 +471,43 @@ def save_state(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices)
 		input("State saved correctly (Press ENTER to continue)")
 
 	except (ValueError, OSError) as err:
-		print("Can't parse state file!")
+		print("Can't write state file!")
 		input("Error: {0}".format(err) + " (Press ENTER to continue)")
+
+#### Edit slices with an external editor ####
+def external_edit(slices,editor):
+	tmpfile='/tmp/' + destfile+str(random.randint(0,1024))+".edit.v2t"
+	try:
+		with open(tmpfile,mode='w', encoding='utf-8') as state_file:
+                        for i in range(len(slices)):
+                                (ss,se)=slices[i]
+                                ss=convert_to_minutes(ss)
+                                se=convert_to_minutes(se)
+                                state_file.write(str(i) + ")" +  str(ss)+"-"+str(se)+"\n")
+                                i += 1
+
+		subprocess.call(editor + " " + tmpfile,shell=True)	
+
+		slices=[]
+		with open(tmpfile, encoding='utf-8') as state_file:
+			for a_line in state_file:
+			        slice_line=a_line.rstrip()
+			        slice_line=slice_line.split(")")[1]
+			        ss=convert_to_seconds(slice_line.split('-')[0])
+			        se=convert_to_seconds(slice_line.split('-')[1])
+			        slices.append([ss,se])
+			        #a_line += 1
+
+                #input("State saved correctly (Press ENTER to continue)")
+		os.remove(tmpfile)
+		
+		return(slices)
+
+	except (ValueError, OSError) as err:
+                print("Can't write state file!")
+                input("Error: {0}".format(err) + " (Press ENTER to continue)")
+
+
 
 def parse_ffprobe_info(sourcefile):
 	#### Ask ffmpeg to provide a json with info about the video that we're going to parse
@@ -521,10 +556,11 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 			print("3) (c)hange slice")
 			print("4) (r)emove slice")
 			print("5) (d)elete all slices")
-			print("6) (s)lice preview")
-			print("7) (p)review clip")
-			print("8) (w)rite destination file")
-			print("9) (q)uit to main menu")
+			print("6) (e)dit all slices")
+			print("7) (s)lice preview")
+			print("8) (p)review clip")
+			print("9) (w)rite destination file")
+			print("10) (q)uit to main menu")
 			print("")
 			print_separator()
 			
@@ -561,7 +597,12 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 						slices = []
 				else:
 					input("No defined slice! (Press ENTER to continue)")
-			elif any(q in slices_choice for q in ["6","S","s"]):
+			elif any(q in slices_choice for q in ["6","E","e"]):
+				if slices:
+					slices = external_edit(slices,editor)
+				else:
+					input("No defined slice! (Press ENTER to continue)")
+			elif any(q in slices_choice for q in ["7","S","s"]):
 				if slices:
 					try:
 						print("which slice would you like to preview? (slice index)")
@@ -574,7 +615,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 				                input("Error: {0}".format(err) + " (Press ENTER to continue)")
 				else:
 					input("No defined slice! (Press ENTER to continue)")
-			elif any(q in slices_choice for q in ["7","P","p"]):
+			elif any(q in slices_choice for q in ["8","P","p"]):
 				if slices:
 					try:
 						tempfile=destfile+str(random.randint(0,1024))+".webm"
@@ -583,7 +624,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 				                input("Error: {0}".format(err) + " (Press ENTER to continue)")
 				else:
 					input("No defined slice! (Press ENTER to continue)")
-			elif any(q in slices_choice for q in ["8","W","w"]):
+			elif any(q in slices_choice for q in ["9","W","w"]):
 				if slices:
 					#### targetfile is destfile less the file extension (first thing after "." starting from 
 					#### the right plus resolution and extension: "_WIDTHxHEIGHT.webm"
@@ -594,7 +635,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 					ffmpeg_write_vo(sourcefile,slices,targetfile,sourcefps,fps,sourcewidth,width,sourceheight,sourcebitrate,bitrate,target_size)
 				else:
 					input("No defined slice! (Press ENTER to continue)")
-			elif any(q in slices_choice for q in ["9","Q","q"]):
+			elif any(q in slices_choice for q in ["10","Q","q"]):
 				slices_loop=True
 		return slices
 	except (ValueError, OSError) as err:
@@ -605,7 +646,8 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 title = "|| video2trailer ||"
 #player="xdg-open"
 #player="vlc"
-player="mplayer -osd-fractions 1"
+player="mplayer -loop 0 -osd-fractions 1"
+editor="vim"
 
 sourcefile = args.sourcefile
 
