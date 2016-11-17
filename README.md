@@ -4,8 +4,9 @@ dependecies:
 python3
 ffmpeg
 imagemagik
+mplayer
 
-use pip install for:
-MoviePy
+use pip install for (theese shouldn't be needed for vide2trailertui):
+MoviePy 
 glob2
 Pillow

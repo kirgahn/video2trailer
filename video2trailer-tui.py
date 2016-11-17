@@ -55,15 +55,33 @@ def xdg_open(sourcefile):
 
 #### convert seconds to hours (hh:mm:ss) ####
 def convert_to_minutes(seconds):
+	seconds=float(seconds)
 	sec = timedelta(seconds=seconds)
 	converted = datetime(1,1,1) + sec
-	converted=converted.time()
+	#converted=converted.time()
+	converted=converted.strftime('%H:%M:%S.%f')[:-3]
 	return  converted
 
 #### convert hours (hh:mm:ss) to seconds ####
-def convert_to_seconds(time):
-	converted = sum(int(x) * 60 ** i for i,x in enumerate(reversed(time.split(":"))))
-	return int(converted)
+#def convert_to_seconds(time):
+def convert_to_seconds(stime):
+	#converted = sum(int(x) * 60 ** i for i,x in enumerate(reversed(time.split(":"))))
+	msecs_found=False
+	if stime.find(".") != -1: 
+	        (hours,msecs)=stime.split(".")
+	        msecs_found=True
+	else:
+	        hours=stime
+	
+	secs=str(sum(int(x) * 60 ** i for i,x in enumerate(reversed(hours.split(":")))))
+	
+	if msecs_found:
+	        secs=secs + "." + msecs
+	else:
+	        secs=secs + ".000"
+
+	#return int(converted)
+	return secs
 
 #### retrieve terminal size ####
 def terminal_size():
@@ -114,7 +132,7 @@ def print_duration(slices):
 	total_duration=0
 	for i in range(len(slices)):
 		(ss,se)=slices[i]
-		diff=se-ss
+		diff=float(se)-float(ss)
 		total_duration=total_duration+diff
 	print("Total video lenght: " + str(convert_to_minutes(total_duration)) )
 	
@@ -165,13 +183,14 @@ def print_slices(slices,show_info):
 		
 def add_slice(slices,sourceduration):
 	try:
-		print("Please insert start time for the new subclip (hh:mm:ss)")
+		print("Please insert start time for the new subclip (hh:mm:ss.msc)")
 		ss=convert_to_seconds(input("#"))
 
-		print("Please insert end time for the new subclip (hh:mm:ss)")
+		print("Please insert end time for the new subclip (hh:mm:ss.msc)")
 		se=convert_to_seconds(input("#"))
 
-		if (ss < round(sourceduration)) and (se < round(sourceduration)):
+		#if (ss < round(sourceduration)) and (se < round(sourceduration)):
+		if (float(ss) < sourceduration) and (float(se) < sourceduration):
 			slices.append([ss,se])
 		else:
                 	input("Slices can't start/end after the end of the source video. (Press ENTER to continue)")
@@ -189,13 +208,13 @@ def insert_slice(slices,sourceduration):
 		newpos=int(input("#"))
 	
 		if not (newpos > len(slices)):
-			print("Please insert start time for the new subclip (hh:mm:ss)")
+			print("Please insert start time for the new subclip (hh:mm:ss.msc)")
 			ss=convert_to_seconds(input("#"))
 	
-			print("Please insert end time for the new subclip (hh:mm:ss)")
+			print("Please insert end time for the new subclip (hh:mm:ss.msc)")
 			se=convert_to_seconds(input("#"))
 	
-			if (ss < round(sourceduration)) and (se < round(sourceduration)):
+			if (float(ss) < sourceduration) and (float(se) < sourceduration):
 				slices.insert(newpos,[ss,se])
 			else:
 	                        input("Slices can't start/end after the end of the source video. (Press ENTER to continue)")
@@ -214,13 +233,13 @@ def change_slice(slices,sourceduration):
 		change_index=int(input("#"))
 		if not (change_index > len(slices)):
 
-			print("Please insert start time for the new subclip (hh:mm:ss)")
+			print("Please insert start time for the new subclip (hh:mm:ss.msc)")
 			ss=convert_to_seconds(input("#"))
 	
-			print("Please insert end time for the new subclip (hh:mm:ss)")
+			print("Please insert end time for the new subclip (hh:mm:ss.msc)")
 			se=convert_to_seconds(input("#"))
 	
-			if (ss < round(sourceduration)) or (se < round(sourceduration)):
+			if (float(ss) < sourceduration) or (float(se) < sourceduration):
 				slices[change_index]=(ss,se)
 			else:
 	                        input("Slices can't start/end after the end of the source video. (Press ENTER to continue)")
