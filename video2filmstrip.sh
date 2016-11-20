@@ -27,11 +27,13 @@ progressbar=""
 duration_float=`ffprobe -i "$1" -show_format -v quiet | sed -n 's/duration=//p'`
 duration=`echo "scale=2;$duration_float"|bc`
 timegap=`echo "scale=2;$duration/$tot_frames;"|bc`
+tmpdir=$(mktemp -d "/tmp/XXXXXXX")
 
 if [ "$quiet" != "true"  ];
 then
 	echo "video duration:" `date -u -d @${duration} +"%T"`
 	echo "time gap between snapshots:" `date -u -d @${timegap} +"%T"`
+	echo "temporary directory: " $tmpdir
 fi
 
 ################################################
@@ -51,7 +53,8 @@ do
 			frametime=`echo $i*$timegap|bc` 
 
 	fi
-	ffmpeg -v 0 -ss $frametime -y -i "$1" -t 1 -s 320x180 -f image2 _tmp$i.jpg; 
+	#ffmpeg -v 0 -ss $frametime -y -i "$1" -t 1 -s 320x180 -f image2 $tmpdir/_tmp$i.jpg;  
+	ffmpeg -ss $frametime -y -i "$1" -t 1 -s 320x180 -f image2 $tmpdir/_tmp$i.jpg;  
 
 ################################################
 ## Convert time to an understandable format   ##
@@ -70,9 +73,9 @@ do
 		progressbar=$progressbar#
 	done;
 
-	framelist=$framelist" _tmp$i.jpg"
-	convert _tmp$i.jpg -fill black -gravity Southwest -pointsize 14 -annotate +0+0 $frametimehours _tmp$i.jpg
-	convert _tmp$i.jpg -fill white -gravity Southwest -pointsize 14 -annotate +1+1 $frametimehours _tmp$i.jpg
+	framelist=$framelist"$tmpdir/_tmp$i.jpg "
+	convert $tmpdir/_tmp$i.jpg -fill black -gravity Southwest -pointsize 14 -annotate +0+0 $frametimehours $tmpdir/_tmp$i.jpg
+	convert $tmpdir/_tmp$i.jpg -fill white -gravity Southwest -pointsize 14 -annotate +1+1 $frametimehours $tmpdir/_tmp$i.jpg
 
 	if [ "$quiet" != "true"  ];
 	then
@@ -93,14 +96,14 @@ done;
 ## Offer to show results.                     ##
 ################################################
 
-montage  -tile 6 -geometry +0+0  $framelist "$1".jpeg
+montage  -tile 6 -geometry +0+0  $tmpdir/$framelist "$1".jpeg
 
 	if [ "$quiet" != "true"  ];
 	then
 		echo "cleaning temp files.."
 	fi
 
-rm _tmp*
+#rm -rf $tmpdir
 
 	if [ "$quiet" != "true"  ];
 	then
