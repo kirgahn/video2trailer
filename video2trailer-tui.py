@@ -760,7 +760,10 @@ else:
 		else:
 		        width=args.width
 		if not args.bitrate:
-		        bitrate="1.2M"
+			#size_coefficient=4
+			#bitrate=size_coefficient*8192
+			#bitrate=str(bitrate/sourceduration)+"M"
+			bitrate="0.2M"
 		else:
 		        bitrate=sourcebitrate+"M"
 		
