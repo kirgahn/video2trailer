@@ -12,8 +12,9 @@ threads=4
 fps=24
 res=640
 
+
 ### Parse Options ####
-while getopts "s:b:ct:f:r:" opt; do
+while getopts "s:b:ct:f:r:o:" opt; do
 	case $opt in
 	s)
 		#### target output filesize in MB
@@ -40,6 +41,10 @@ while getopts "s:b:ct:f:r:" opt; do
 	r)
 		#### target resolution
 		res=$OPTARG
+		;;
+	o)
+		#### output file, overrides default output filename
+		output_filename=$OPTARG
 		;;
 	\?)
 		echo "Invalid option: -$OPTARG" >&2
@@ -112,6 +117,10 @@ if [ $variable_bitrate -eq 1 ]; then
 	maxrate=$(echo $vbitrate+$vbitrate*25/100|bc)
 	buffer_size=$(echo $maxrate*2|bc)
 
+	if [[ $output_filename == "" ]]; then
+		output_filename="$source_file"."$vbitrate"-"$maxrate"k."$buffer_size"k."$fps"fps.w"$res".webm;
+	fi
+
 #### DEBUG info
 # echo "max_ratio:"$max_ratio
 # echo "vbitrate:"$vbitrate
@@ -124,12 +133,12 @@ if [ $variable_bitrate -eq 1 ]; then
 
 	#### Second pass
 	pass=2
-	ffmpeg -stats -v quiet -i "$source_file" -r "$fps" -codec:v "$encoder" -quality good -cpu-used 0 -b:v "$vbitrate"k -qmin 10 -qmax 42 -maxrate "$maxrate"k -bufsize "$buffer_size"k -threads "$threads" -vf scale=-1:"$res" -codec:a libvorbis -b:a "$audio_bitrate"k -pass "$pass" -threads "$threads" -f webm "$source_file".pass2."$vbitrate"-"$maxrate"k."$buffer_size"k."$fps"fps.w"$res".webm;
+	ffmpeg -stats -v quiet -i "$source_file" -y -r "$fps" -codec:v "$encoder" -quality good -cpu-used 0 -b:v "$vbitrate"k -qmin 10 -qmax 42 -maxrate "$maxrate"k -bufsize "$buffer_size"k -threads "$threads" -vf scale=-1:"$res" -codec:a libvorbis -b:a "$audio_bitrate"k -pass "$pass" -threads "$threads" -f webm $output_filename;
 
 	#### Removes ffmpeg pass log
 	rm ffmpeg2pass-0.log
 else
-	#### Constant bitrate
+	#### legacy constant bitrate
 	if [[ ! $target_bitrate -gt 0 ]];
 		then
 			echo "target size $target_size is not enough to contain the video stream, got a negative bitrate of: $target_bitrate kbps";

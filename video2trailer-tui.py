@@ -33,17 +33,22 @@ def video2filmstrip(sourcefile):
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
 #### run video2trailer-compress ####
-def compress(destfile,target_size,fps,width,threads):
+#def compress(sourcefile,destfile,target_size,target_bitrate,fps,width,threads):
+def compress(sourcefile,destfile,target_bitrate,fps,width,threads):
 	try:
-		print("Rencoding at selected quality, please wait...")
-		os.system("video2trailer-compress -s " + str(target_size) + " -f " + str(fps) + " -r " + str(width) + " -t " + str(threads) + " \'" + destfile + "\'")
+		print("encoding at selected quality, please wait...")
+		#### convert bitrate from M to k
+		target_bitrate=float(target_bitrate.split("M")[0])*1024
+		
+		#os.system("video2trailer-compress -s " + str(target_size) + " -f " + str(fps) + " -r " + str(width) + " -t " + str(threads) + " \'" + destfile + "\'")
+		os.system("video2trailer-compress -b " + str(target_bitrate) + " -f " + str(fps) + " -r " + str(width) + " -t " + str(threads) + " -o \'" + destfile + "\' \'" + sourcefile + "\'")
 	except OSError as err:
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
 	#confirm=input("Would you like to watch the output file (y/n)")
 	#if confirm == "y" or confirm == "Y" or confirm == "":
 	#	xdg_open(destfile+"."+str(target_size)+"M.webm")
-	input("Encoding completed (Press ENTER to continue)")
+	#input("Encoding completed (Press ENTER to continue)")
 
 #### open sourcefile with default player ####
 def xdg_open(sourcefile):
@@ -52,6 +57,9 @@ def xdg_open(sourcefile):
 			os.system(player + " \'" + sourcefile + "\' &> /dev/null &")
 		except OSError as err:
 			print("OS error: {0}".format(err))
+def check_path(path):
+	if not os.path.exists(path):
+	    os.makedirs(path)
 
 #### convert seconds to hours (hh:mm:ss) ####
 def convert_to_minutes(seconds):
@@ -266,7 +274,9 @@ def remove_slice(slices):
                 input("Slice position is invalid. (Press ENTER to continue)")
 	return slices
 
-def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,fps,sourcewidth,width,sourceheight,sourcebitrate,bitrate,target_size):
+#def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,fps,sourcewidth,width,sourceheight,sourcebitrate,bitrate,target_size):
+def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate):
+
 	try:
 		#### encoder = either libx264 or libvpx
 		encoder="libvpx"
@@ -296,8 +306,47 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,fps,sourcewidth,width,s
 #		if confirm == "y" or confirm == "Y" or confirm == "":
 #			xdg_open(destfile)
 
-		if int(target_size) > 0:
-			compress(destfile,target_size,fps,width,threads)
+#		if int(target_size) > 0:
+#			compress(destfile,target_size,fps,width,threads)
+		
+	except (ValueError, OSError) as err:
+                input("Error: {0}".format(err) + " (Press ENTER to continue)")
+
+def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate):
+	try:
+		#print("dentro!!!")
+		#### encoder = either libx264 or libvpx
+		encoder="libvpx"
+		vo_slices = []
+		for i in range(len(slices)):
+			outfile="\'" + destfile + "_" + str(i) + ".webm\'"
+			print("encoding slice #" + str(i) + " with filename: " + outfile)
+			(ss,se)=slices[i]
+
+			#### with libvpx options
+			ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -codec:v " + encoder + "  -quality good -cpu-used 0  -b:v " + str(sourcebitrate) + "k -qmin 10 -qmax 42 -s " + str(sourcewidth) + "x" + str(sourceheight) + " -threads " + str(threads) + " -filter_complex \""
+	
+	
+			ffmpeg_command=ffmpeg_command + "[0:v]trim="+ str(ss) + ":" + str(se) + ",setpts=PTS-STARTPTS[v" + str(i) + "]; "
+			ffmpeg_command=ffmpeg_command + "[0:a]atrim="+ str(ss) + ":" + str(se) + ",asetpts=PTS-STARTPTS[a" + str(i) + "]; "
+			ffmpeg_command=ffmpeg_command + "[v" + str(i) + "][a" + str(i) + "]"
+		
+			ffmpeg_command=ffmpeg_command + "concat=n=1:v=1:a=1[out]\" "
+			ffmpeg_command=ffmpeg_command + "-map \"[out]\" " + outfile
+			#print("#### ffmpeg_command: " + "\"" + ffmpeg_command + "\"")
+	
+			try:
+				#print(ffmpeg_command)
+				os.system(ffmpeg_command)
+			except OSError as err:
+				input("Error: {0}".format(err) + " (Press ENTER to continue)")
+
+#		confirm=input("Would you like to watch the output file (y/n)")
+#		if confirm == "y" or confirm == "Y" or confirm == "":
+#			xdg_open(destfile)
+
+#		if int(target_size) > 0:
+#			compress(destfile,target_size,fps,width,threads)
 		
 	except (ValueError, OSError) as err:
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
@@ -313,7 +362,7 @@ def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
 	#try:
 	vo_slices = []
 
-	print("Encoding tmp file: \"" + destfile + "\"")
+	print("Encoding preview file: \"" + destfile + "\"")
 	ffmpeg_command="ffmpeg -stats -v quiet -i \'" + sourcefile + "\' -y -codec:v " + encoder + " -b:v " + str(bitrate) + " -s " + str(width) + "x" + str(height) + opts + " -filter_complex \""
 	for i in range(len(slices)):
 		(ss,se)=slices[i]
@@ -332,16 +381,16 @@ def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
 #	### DEBUG 
 #	print(ffmpeg_command)
 
-	print("(p) to watch the preview file, (q) to resume editing ")
+	print("(p) to watch the preview file, (r) to remove the preview file, (q) to resume editing ")
 	while True:
 		confirm=input("")
-		if confirm == "p" or confirm == "P" or confirm == "":
+		if confirm == "p" or confirm == "P": # or confirm == "":
 			xdg_open(destfile)
 			#input("press enter to resume editing")
+		elif confirm == "r" or confirm == "R":
+			os.system("rm " +  destfile)
 		elif confirm == "q" or confirm == "Q":
 			break
-			
-	os.system("rm " +  destfile)
 
 #	except (ValueError, OSError) as err:
 #                input("Error: {0}".format(err) + " (Press ENTER to continue)")
@@ -610,6 +659,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 						subslice=[]
 						subslice.append(slices[which_slice])
 						tempfile=destfile+str(random.randint(0,1024))+".webm"
+
 						write_preview(sourcefile,subslice,tempfile,20,180,320,"0.2M",threads)
 					except (ValueError, OSError) as err:
 				                input("Error: {0}".format(err) + " (Press ENTER to continue)")
@@ -618,7 +668,10 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 			elif any(q in slices_choice for q in ["8","P","p"]):
 				if slices:
 					try:
-						tempfile=destfile+str(random.randint(0,1024))+".webm"
+						ext=".webm" #either .mp4 or .webm
+						path="./preview/"
+						check_path(path)
+						tempfile=path+destfile+str(random.randint(0,1024))+ext
 						write_preview(sourcefile,slices,tempfile,20,180,320,"0.2M",threads)
 					except (ValueError, OSError) as err:
 				                input("Error: {0}".format(err) + " (Press ENTER to continue)")
@@ -626,13 +679,35 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 					input("No defined slice! (Press ENTER to continue)")
 			elif any(q in slices_choice for q in ["9","W","w"]):
 				if slices:
+					#### write the full quality webm
 					#### targetfile is destfile less the file extension (first thing after "." starting from 
 					#### the right plus resolution and extension: "_WIDTHxHEIGHT.webm"
 					#### ext= either .mp4 or .webm
 					ext=".webm" #either .mp4 or .webm
-					targetfile=destfile.rsplit( "." ,1 )[0]+"_"+str(sourcewidth)+"x"+str(sourceheight)+ext
-					print("targetfile: " +targetfile)
-					ffmpeg_write_vo(sourcefile,slices,targetfile,sourcefps,fps,sourcewidth,width,sourceheight,sourcebitrate,bitrate,target_size)
+					path="./full/"
+					check_path(path)
+					targetfile=path+destfile.rsplit( "." ,1 )[0]+"_"+str(sourcewidth)+"x"+str(sourceheight)+ext
+					print("encoding with full quality output: " +targetfile)
+					ffmpeg_write_vo(sourcefile,slices,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate)
+
+					#### write the smaller, variable bitrate version
+					if int(target_size) > 0:
+						path="./variable/"
+						check_path(path)
+						file_to_compress=targetfile
+						targetfile=path+destfile.rsplit( "." ,1 )[0]+".vbr"+str(bitrate)+"."+str(fps)+"fps."+"w"+str(width)+ext
+						#print("encoding with choosen quality output: " +targetfile)
+						compress(file_to_compress,targetfile,bitrate,fps,width,threads)
+		
+					#### write each slice as it's own webm
+					#def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate):
+					path="./slices/"
+					check_path(path)
+					targetfile=path+destfile.rsplit( "." ,1 )[0]
+					#print("encoding each slices as: " + targetfile + "_x" + ext)
+					write_all_slices(sourcefile,slices,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate)
+
+					input("Encoding completed (Press ENTER to continue)")
 				else:
 					input("No defined slice! (Press ENTER to continue)")
 			elif any(q in slices_choice for q in ["10","Q","q"]):
@@ -641,6 +716,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 	except (ValueError, OSError) as err:
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
+#################### BEGIN #########################
 
 #### Parse arguments and load state eventually
 title = "|| video2trailer ||"
@@ -684,7 +760,7 @@ else:
 		else:
 		        width=args.width
 		if not args.bitrate:
-		        bitrate="0.6M"
+		        bitrate="1.2M"
 		else:
 		        bitrate=sourcebitrate+"M"
 		
