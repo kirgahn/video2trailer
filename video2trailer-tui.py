@@ -556,12 +556,15 @@ def external_edit(slices,editor):
                 print("Can't write state file!")
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
-
-
 def parse_ffprobe_info(sourcefile):
 	#### Ask ffmpeg to provide a json with info about the video that we're going to parse
-	stream_info = subprocess.getoutput('ffprobe -v quiet -print_format json -show_format -show_streams \'' + sourcefile + "\'")
-	#print(stream_info)
+	command='ffprobe -v quiet -print_format json -show_format -show_streams \'' + sourcefile + "\'"
+	stream_info = subprocess.getoutput(command)
+	#stream_info=subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+	#stream_info=stream_info.communicate()[0]
+	#stream_info=bytes(stream_info.communicate()[0],"utf-8")
+	#stream_info=bytes(stream_info.communicate()[0],"Windows-1252")
+	#stream_info=bytes(stream_info,"utf-8")
 	j = json.loads(stream_info)
 	
 	#### ['streams'] is an array that includes audio and video streams
@@ -577,6 +580,14 @@ def parse_ffprobe_info(sourcefile):
 	sourcebitrate=int(j['format']['bit_rate'])/1000
 	sourceduration=math.floor(float(j['format']['duration']))
 	
+	#### DEBUG :: UnicodeDecodeError: 'ascii' codec can't decode byte 0xe2 in position 3714: ordinal not in range(128)
+	print(sourcewidth)
+	print(sourceheight)
+	print(str(sourcefps))
+	print(str(sourcebitrate))
+	print(str(sourceduration))
+	#### DEBUG
+
 	return (sourcewidth,sourceheight,sourcefps,sourcebitrate,sourceduration)
 
 def print_source_info(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourceheight,sourcefps):
