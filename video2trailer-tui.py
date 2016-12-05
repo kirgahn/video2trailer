@@ -33,23 +33,22 @@ def video2filmstrip(sourcefile):
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
 #### run video2trailer-compress ####
-#def compress(sourcefile,destfile,target_size,target_bitrate,fps,width,threads):
-def compress(sourcefile,destfile,target_bitrate,fps,width,threads):
-	try:
-		print("encoding at selected quality, please wait...")
-		#### convert bitrate from M to k
-		target_bitrate=float(target_bitrate.split("M")[0])*1024
-		
-		#os.system("video2trailer-compress -s " + str(target_size) + " -f " + str(fps) + " -r " + str(width) + " -t " + str(threads) + " \'" + destfile + "\'")
-		os.system("video2trailer-compress -b " + str(target_bitrate) + " -f " + str(fps) + " -r " + str(width) + " -t " + str(threads) + " -o \'" + destfile + "\' \'" + sourcefile + "\'")
-	except OSError as err:
-                input("Error: {0}".format(err) + " (Press ENTER to continue)")
-
-	#confirm=input("Would you like to watch the output file (y/n)")
-	#if confirm == "y" or confirm == "Y" or confirm == "":
-	#	xdg_open(destfile+"."+str(target_size)+"M.webm")
-	#input("Encoding completed (Press ENTER to continue)")
-
+#def compress(sourcefile,destfile,target_bitrate,fps,width,threads):
+#	try:
+#		print("encoding at selected quality, please wait...")
+#		#### convert bitrate from M to k
+#		target_bitrate=float(target_bitrate.split("M")[0])*1024
+#		
+#		#os.system("video2trailer-compress -s " + str(target_size) + " -f " + str(fps) + " -r " + str(width) + " -t " + str(threads) + " \'" + destfile + "\'")
+#		os.system("video2trailer-compress -b " + str(target_bitrate) + " -f " + str(fps) + " -r " + str(width) + " -t " + str(threads) + " -o \'" + destfile + "\' \'" + sourcefile + "\'")
+#	except OSError as err:
+#                input("Error: {0}".format(err) + " (Press ENTER to continue)")
+#
+#	#confirm=input("Would you like to watch the output file (y/n)")
+#	#if confirm == "y" or confirm == "Y" or confirm == "":
+#	#	xdg_open(destfile+"."+str(target_size)+"M.webm")
+#	#input("Encoding completed (Press ENTER to continue)")
+#
 #### open sourcefile with default player ####
 def xdg_open(sourcefile):
 	if sourcefile:
@@ -281,7 +280,6 @@ def remove_slice(slices):
 	return slices
 
 def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads):
-
 	try:
 		#### encoder = either libx264 or libvpx
 		encoder="libvpx"
@@ -299,26 +297,16 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
 			ffmpeg_command=ffmpeg_command + "[v" + str(i) + "][a" + str(i) + "]"
 	
 		ffmpeg_command=ffmpeg_command + "concat=n=" + str(len(slices)) + ":v=1:a=1[out]\""
-		ffmpeg_command_pass1=ffmpeg_command + "-an -pass 1 -map \"[out]\" -f webm " + "/dev/null"
-		ffmpeg_command_pass2=ffmpeg_command + "-pass 2 -map \"[out]\" " + "-f webm \'" + destfile + "\'"
+		ffmpeg_command_pass1=ffmpeg_command + " -an -pass 1 -map \"[out]\" -f webm " + "/dev/null"
+		ffmpeg_command_pass2=ffmpeg_command + " -pass 2 -map \"[out]\" " + "-f webm \'" + destfile + "\'"
 		#ffmpeg_command=ffmpeg_command + "-map \"[out]\" " + "\'" + destfile + "\'"
 		#print("#### ffmpeg_command: " + "\"" + ffmpeg_command + "\"")
 
-		try:
-			os.system(ffmpeg_command_pass1)
-			os.system(ffmpeg_command_pass2)
-			os.remove("ffmpeg2pass-0.log")
-			print("### 1:\'" + ffmpeg_command_pass1 + "\'")
-			print("### 2:\'" + ffmpeg_command_pass2 + "\'")
-		except OSError as err:
-			input("Error: {0}".format(err) + " (Press ENTER to continue)")
-
-#		confirm=input("Would you like to watch the output file (y/n)")
-#		if confirm == "y" or confirm == "Y" or confirm == "":
-#			xdg_open(destfile)
-
-#		if int(target_size) > 0:
-#			compress(destfile,target_size,fps,width,threads)
+		#print("### 1:\'" + ffmpeg_command_pass1 + "\'")
+		#print("### 2:\'" + ffmpeg_command_pass2 + "\'")
+		os.system(ffmpeg_command_pass1)
+		os.system(ffmpeg_command_pass2)
+		os.remove("ffmpeg2pass-0.log")
 		
 	except (ValueError, OSError) as err:
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
@@ -363,6 +351,7 @@ def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheig
 
 def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
 
+	#### using mp4 format for faster preview rendering
 	ext="mp4"
 	#encoder="libx264" ### either x264/mp4 or libvpx/webm
 	encoder="libvpx" ### either x264/mp4 or libvpx/webm
@@ -417,7 +406,8 @@ def change_settings(destfile,fps,width,bitrate,threads,target_size):
 			print("3) (W)idth (" + str(width) + ")")
 			print("4) (B)itrate (" + bitrate + ")")
 			print("5) encoder (T)hreads (" + str(threads) + ")")
-			print("6) (C)ompressed video target size (0 means no further compression) (" + str(target_size) + ")")
+			#print("6) (C)ompressed video target size (0 means no further compression) (" + str(target_size) + ")")
+			print("6) (C)ompress output video to ./variable (0 means no, >1 means yes) (" + str(target_size) + ")")
 			print("7) (Quit) to main menu")
 			print("")
 			print_separator()
@@ -591,11 +581,11 @@ def parse_ffprobe_info(sourcefile):
 	sourceduration=math.floor(float(j['format']['duration']))
 	
 	#### DEBUG :: UnicodeDecodeError: 'ascii' codec can't decode byte 0xe2 in position 3714: ordinal not in range(128)
-	print(sourcewidth)
-	print(sourceheight)
-	print(str(sourcefps))
-	print(str(sourcebitrate))
-	print(str(sourceduration))
+	#print(sourcewidth)
+	#print(sourceheight)
+	#print(str(sourcefps))
+	#print(str(sourcebitrate))
+	#print(str(sourceduration))
 	#### DEBUG
 
 	return (sourcewidth,sourceheight,sourcefps,sourcebitrate,sourceduration)
