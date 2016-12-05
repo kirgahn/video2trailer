@@ -57,6 +57,8 @@ def xdg_open(sourcefile):
 			os.system(player + " \'" + sourcefile + "\' &> /dev/null &")
 		except OSError as err:
 			print("OS error: {0}".format(err))
+
+#### create directory if not found
 def check_path(path):
 	if not os.path.exists(path):
 	    os.makedirs(path)
@@ -103,6 +105,11 @@ def print_title():
 	(columns,rows)=terminal_size()
 	decorators=int((columns/2 - len(title)/2))
 	print(("=" * decorators) + title + ("=" * decorators))
+
+def calculate_height(width,sourcewidth,sourceheight):
+	ratio=sourcewidth/sourceheight
+	height=width/ratio
+	return height
 
 #### draw a separator ####
 def print_separator():
@@ -197,7 +204,6 @@ def add_slice(slices,sourceduration):
 		print("Please insert end time for the new subclip (hh:mm:ss.msc)")
 		se=convert_to_seconds(input("#"))
 
-		#if (ss < round(sourceduration)) and (se < round(sourceduration)):
 		if (float(ss) < sourceduration) and (float(se) < sourceduration):
 			slices.append([ss,se])
 		else:
@@ -274,8 +280,7 @@ def remove_slice(slices):
                 input("Slice position is invalid. (Press ENTER to continue)")
 	return slices
 
-#def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,fps,sourcewidth,width,sourceheight,sourcebitrate,bitrate,target_size):
-def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate):
+def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads):
 
 	try:
 		#### encoder = either libx264 or libvpx
@@ -293,7 +298,7 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
 		for i in range(len(slices)):
 			ffmpeg_command=ffmpeg_command + "[v" + str(i) + "][a" + str(i) + "]"
 	
-		ffmpeg_command=ffmpeg_command + "concat=n=" + str(len(slices)) + ":v=1:a=1[out]\" "
+		ffmpeg_command=ffmpeg_command + "concat=n=" + str(len(slices)) + ":v=1:a=1[out]\""
 		ffmpeg_command_pass1=ffmpeg_command + "-an -pass 1 -map \"[out]\" -f webm " + "/dev/null"
 		ffmpeg_command_pass2=ffmpeg_command + "-pass 2 -map \"[out]\" " + "-f webm \'" + destfile + "\'"
 		#ffmpeg_command=ffmpeg_command + "-map \"[out]\" " + "\'" + destfile + "\'"
@@ -303,8 +308,8 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
 			os.system(ffmpeg_command_pass1)
 			os.system(ffmpeg_command_pass2)
 			os.remove("ffmpeg2pass-0.log")
-			#print("### 1:\'" + ffmpeg_command_pass1 + "\'")
-			#print("### 2:\'" + ffmpeg_command_pass2 + "\'")
+			print("### 1:\'" + ffmpeg_command_pass1 + "\'")
+			print("### 2:\'" + ffmpeg_command_pass2 + "\'")
 		except OSError as err:
 			input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
@@ -320,7 +325,6 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
 
 def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate):
 	try:
-		#print("dentro!!!")
 		#### encoder = either libx264 or libvpx
 		encoder="libvpx"
 		vo_slices = []
@@ -705,23 +709,25 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 					check_path(path)
 					targetfile=path+destfile.rsplit( "." ,1 )[0]+"_"+str(sourcewidth)+"x"+str(sourceheight)+ext
 					print("encoding with full quality output: " +targetfile)
-					ffmpeg_write_vo(sourcefile,slices,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate)
+					ffmpeg_write_vo(sourcefile,slices,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads)
 
 					#### write the smaller, variable bitrate version
 					if int(target_size) > 0:
 						path="./variable/"
 						check_path(path)
+						#### find correct height value given the priginl aspect ratio
+						#height=calculate_height(int(width),int(sourcewidth),int(sourceheight))
+						height=calculate_height(width,sourcewidth,sourceheight)
 						file_to_compress=targetfile
 						targetfile=path+destfile.rsplit( "." ,1 )[0]+".vbr"+str(bitrate)+"."+str(fps)+"fps."+"w"+str(width)+ext
 						#print("encoding with choosen quality output: " +targetfile)
-						compress(file_to_compress,targetfile,bitrate,fps,width,threads)
+						ffmpeg_write_vo(sourcefile,slices,targetfile,fps,width,height,bitrate,threads)
+						#compress(file_to_compress,targetfile,bitrate,fps,width,threads)
 		
 					#### write each slice as it's own webm
-					#def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate):
 					path="./slices/"
 					check_path(path)
 					targetfile=path+destfile.rsplit( "." ,1 )[0]
-					#print("encoding each slices as: " + targetfile + "_x" + ext)
 					write_all_slices(sourcefile,slices,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate)
 
 					input("Encoding completed (Press ENTER to continue)")
