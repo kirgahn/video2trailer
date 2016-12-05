@@ -294,11 +294,17 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
 			ffmpeg_command=ffmpeg_command + "[v" + str(i) + "][a" + str(i) + "]"
 	
 		ffmpeg_command=ffmpeg_command + "concat=n=" + str(len(slices)) + ":v=1:a=1[out]\" "
-		ffmpeg_command=ffmpeg_command + "-map \"[out]\" " + "\'" + destfile + "\'"
+		ffmpeg_command_pass1=ffmpeg_command + "-an -pass 1 -map \"[out]\" -f webm " + "/dev/null"
+		ffmpeg_command_pass2=ffmpeg_command + "-pass 2 -map \"[out]\" " + "-f webm \'" + destfile + "\'"
+		#ffmpeg_command=ffmpeg_command + "-map \"[out]\" " + "\'" + destfile + "\'"
 		#print("#### ffmpeg_command: " + "\"" + ffmpeg_command + "\"")
 
 		try:
-			os.system(ffmpeg_command)
+			os.system(ffmpeg_command_pass1)
+			os.system(ffmpeg_command_pass2)
+			os.remove("ffmpeg2pass-0.log")
+			#print("### 1:\'" + ffmpeg_command_pass1 + "\'")
+			#print("### 2:\'" + ffmpeg_command_pass2 + "\'")
 		except OSError as err:
 			input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
