@@ -107,7 +107,7 @@ def print_title():
 
 def calculate_height(width,sourcewidth,sourceheight):
 	ratio=sourcewidth/sourceheight
-	height=width/ratio
+	height=round(width/ratio)
 	return height
 
 #### draw a separator ####
@@ -287,6 +287,7 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
 
 		#### with libvpx options
 		ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -codec:v " + encoder + "  -quality good -cpu-used 0  -b:v " + str(sourcebitrate) + "k -qmin 10 -qmax 42 -s " + str(sourcewidth) + "x" + str(sourceheight) + " -threads " + str(threads) + " -filter_complex \""
+		#ffmpeg_command="ffmpeg -stats -i " + "\'" + sourcefile + "\'" + " -y -codec:v " + encoder + "  -quality good -cpu-used 0  -b:v " + str(sourcebitrate) + "k -qmin 10 -qmax 42 -s " + str(sourcewidth) + "x" + str(sourceheight) + " -threads " + str(threads) + " -filter_complex \""
 
 		for i in range(len(slices)):
 			(ss,se)=slices[i]
@@ -394,7 +395,7 @@ def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
 #	except (ValueError, OSError) as err:
 #                input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
-def change_settings(destfile,fps,width,bitrate,threads,target_size):
+def change_settings(destfile,fps,width,bitrate,threads,target_size,write_full_quality,write_custom_quality,write_slices):
 	try:
 		settings_loop=False
 		while not settings_loop:
@@ -407,8 +408,11 @@ def change_settings(destfile,fps,width,bitrate,threads,target_size):
 			print("4) (B)itrate (" + bitrate + ")")
 			print("5) encoder (T)hreads (" + str(threads) + ")")
 			#print("6) (C)ompressed video target size (0 means no further compression) (" + str(target_size) + ")")
-			print("6) (C)ompress output video to ./variable (0 means no, >1 means yes) (" + str(target_size) + ")")
-			print("7) (Quit) to main menu")
+			#print("6) (C)ompress output video to ./variable (0 means no, >1 means yes) (" + str(target_size) + ")")
+			print("6) F(u)ll quality video output (" + str(write_full_quality) + ")")
+			print("7) (C)ustom quality video output (" + str(write_custom_quality) + ")")
+			print("8) (S)lices output (" + str(write_slices) + ")")
+			print("9) (Quit) to main menu")
 			print("")
 			print_separator()
 	
@@ -433,12 +437,18 @@ def change_settings(destfile,fps,width,bitrate,threads,target_size):
 			elif any(q in settings_choice for q in ["5","T","t"]):
 				new_threads = input("threads: ")
 				threads=new_threads
-			elif any(q in settings_choice for q in ["6","C","c"]):
-				new_target_size = input("target size: ")
-				target_size=new_target_size
+			elif any(q in settings_choice for q in ["6","U","u"]):
+				write_full_quality = input("full quality output: ")
+			elif any(q in settings_choice for q in ["7","C","c"]):
+				write_custom_quality = input("custom quality output: ")
+			elif any(q in settings_choice for q in ["8","S","s"]):
+				write_slices = input("write each slice as its own video: ")
+			#elif any(q in settings_choice for q in ["6","C","c"]):
+			#	new_target_size = input("target size: ")
+			#	target_size=new_target_size
 			elif any(q in settings_choice for q in ["7","Q","q"]):
 				settings_loop=True
-		return (destfile,fps,width,bitrate,threads,target_size)
+		return (destfile,fps,width,bitrate,threads,target_size,write_full_quality,write_custom_quality,write_slices)
 	except (ValueError, OSError) as err:
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
 		
@@ -464,6 +474,9 @@ def load_state(state_file_name):
 			width = int(state_file.readline().rstrip())
 			threads = int(state_file.readline().rstrip())
 			target_size = int(state_file.readline().rstrip())
+			write_full_quality = int(state_file.readline().rstrip())
+			write_custom_quality = int(state_file.readline().rstrip())
+			write_slices = int(state_file.readline().rstrip())
 			
 			#### skip three lines
 			state_file.readline().rstrip()
@@ -477,14 +490,14 @@ def load_state(state_file_name):
 				se=convert_to_seconds(slice_line.split('-')[1])
 				slices.append([ss,se])
 
-		return (destfile,fps,width,bitrate,threads,target_size,slices)
+		return (destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,write_slices)
 
 	except (ValueError, OSError) as err:
 		print("Can't parse state file!")
 		input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
 #### Save State ####
-def save_state(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices):
+def save_state(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,write_slices):
 	line_number = 0
 	
 	if sourcefile.find(".v2t")>0:
@@ -505,6 +518,9 @@ def save_state(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices)
 			state_file.write(str(width)+"\n")
 			state_file.write(str(threads)+"\n")
 			state_file.write(str(target_size)+"\n")
+			state_file.write(str(write_full_quality)+"\n")
+			state_file.write(str(write_custom_quality)+"\n")
+			state_file.write(str(write_slices)+"\n")
 			
 			state_file.write(""+"\n")
 			state_file.write("slices"+"\n")
@@ -690,35 +706,38 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 					input("No defined slice! (Press ENTER to continue)")
 			elif any(q in slices_choice for q in ["9","W","w"]):
 				if slices:
-					#### write the full quality webm
-					#### targetfile is destfile less the file extension (first thing after "." starting from 
-					#### the right plus resolution and extension: "_WIDTHxHEIGHT.webm"
-					#### ext= either .mp4 or .webm
 					ext=".webm" #either .mp4 or .webm
-					path="./full/"
-					check_path(path)
-					targetfile=path+destfile.rsplit( "." ,1 )[0]+"_"+str(sourcewidth)+"x"+str(sourceheight)+ext
-					print("encoding with full quality output: " +targetfile)
-					ffmpeg_write_vo(sourcefile,slices,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads)
 
-					#### write the smaller, variable bitrate version
-					if int(target_size) > 0:
+					if int(write_full_quality) > 0:
+						#### write the full quality webm
+						#### targetfile is destfile less the file extension (first thing after "." starting from 
+						#### the right plus resolution and extension: "_WIDTHxHEIGHT.webm"
+						path="./full/"
+						check_path(path)
+						targetfile=path+destfile.rsplit( "." ,1 )[0]+"_"+str(sourcewidth)+"x"+str(sourceheight)+ext
+						print("encoding with full quality output: " +targetfile)
+						ffmpeg_write_vo(sourcefile,slices,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads)
+
+					#### write the custom quality version
+					#if int(target_size) > 0:
+					if int(write_custom_quality) > 0:
 						path="./variable/"
 						check_path(path)
 						#### find correct height value given the priginl aspect ratio
 						#height=calculate_height(int(width),int(sourcewidth),int(sourceheight))
 						height=calculate_height(width,sourcewidth,sourceheight)
-						file_to_compress=targetfile
-						targetfile=path+destfile.rsplit( "." ,1 )[0]+".vbr"+str(bitrate)+"."+str(fps)+"fps."+"w"+str(width)+ext
+						#file_to_compress=targetfile
+						targetfile=path+destfile.rsplit( "." ,1 )[0]+"_"+str(width)+"x"+str(height)+".vbr"+str(bitrate)+"."+str(fps)+"fps"+ext
 						#print("encoding with choosen quality output: " +targetfile)
 						ffmpeg_write_vo(sourcefile,slices,targetfile,fps,width,height,bitrate,threads)
 						#compress(file_to_compress,targetfile,bitrate,fps,width,threads)
-		
+
 					#### write each slice as it's own webm
-					path="./slices/"
-					check_path(path)
-					targetfile=path+destfile.rsplit( "." ,1 )[0]
-					write_all_slices(sourcefile,slices,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate)
+					if int(write_slices) > 0:
+						path="./slices/"
+						check_path(path)
+						targetfile=path+destfile.rsplit( "." ,1 )[0]
+						write_all_slices(sourcefile,slices,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate)
 
 					input("Encoding completed (Press ENTER to continue)")
 				else:
@@ -738,11 +757,15 @@ title = "|| video2trailer ||"
 player="mplayer -loop 0 -osd-fractions 1"
 editor="vim"
 
+write_full_quality=1
+write_custom_quality=1
+write_slices=1
+
 sourcefile = args.sourcefile
 
 if sourcefile.lower().endswith(('.v2t')):
 	state_file_name=sourcefile
-	(destfile,fps,width,bitrate,threads,target_size,slices) = load_state(state_file_name)
+	(destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,write_slices) = load_state(state_file_name)
 	sourcefile=os.path.splitext(sourcefile)[0]
 	
 	(sourcewidth,sourceheight,sourcefps,sourcebitrate,sourceduration)=parse_ffprobe_info(sourcefile)
@@ -754,7 +777,8 @@ else:
 
 	try:
 		with open(state_file_name,encoding='utf-8'):
-			(destfile,fps,width,bitrate,threads,target_size,slices) = load_state(state_file_name)
+			#(destfile,fps,width,bitrate,threads,target_size,slices) = load_state(state_file_name)
+			(destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,write_slices) = load_state(state_file_name)
 	except (ValueError, OSError):
 
 		slices = []
@@ -826,11 +850,11 @@ try:
 		elif any(q in choice for q in ["3","E","e"]):
 			slices = slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourceheight,sourcefps,show_info)
 		elif any(q in choice for q in ["4","c","c"]):
-			(destfile,fps,width,bitrate,threads,target_size) = change_settings(destfile,fps,width,bitrate,threads,target_size)
+			(destfile,fps,width,bitrate,threads,target_size,write_full_quality,write_custom_quality,write_slices) = change_settings(destfile,fps,width,bitrate,threads,target_size,write_full_quality,write_custom_quality,write_slices)
 		elif any(q in choice for q in ["5","i","i"]):
 			show_info=not show_info
 		elif any(q in choice for q in ["6","S","s"]):
-			save_state(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices)
+			save_state(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,write_slices)
 		elif any(q in choice for q in ["6","Q","q"]):
 			os.system('cls||clear')
 			quit_loop=True
