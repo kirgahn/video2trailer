@@ -32,23 +32,6 @@ def video2filmstrip(sourcefile):
 	except OSError as err:
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
-#### run video2trailer-compress ####
-#def compress(sourcefile,destfile,target_bitrate,fps,width,threads):
-#	try:
-#		print("encoding at selected quality, please wait...")
-#		#### convert bitrate from M to k
-#		target_bitrate=float(target_bitrate.split("M")[0])*1024
-#		
-#		#os.system("video2trailer-compress -s " + str(target_size) + " -f " + str(fps) + " -r " + str(width) + " -t " + str(threads) + " \'" + destfile + "\'")
-#		os.system("video2trailer-compress -b " + str(target_bitrate) + " -f " + str(fps) + " -r " + str(width) + " -t " + str(threads) + " -o \'" + destfile + "\' \'" + sourcefile + "\'")
-#	except OSError as err:
-#                input("Error: {0}".format(err) + " (Press ENTER to continue)")
-#
-#	#confirm=input("Would you like to watch the output file (y/n)")
-#	#if confirm == "y" or confirm == "Y" or confirm == "":
-#	#	xdg_open(destfile+"."+str(target_size)+"M.webm")
-#	#input("Encoding completed (Press ENTER to continue)")
-#
 #### open sourcefile with default player ####
 def xdg_open(sourcefile):
 	if sourcefile:
@@ -72,7 +55,6 @@ def convert_to_minutes(seconds):
 	return  converted
 
 #### convert hours (hh:mm:ss) to seconds ####
-#def convert_to_seconds(time):
 def convert_to_seconds(stime):
 	#converted = sum(int(x) * 60 ** i for i,x in enumerate(reversed(time.split(":"))))
 	msecs_found=False
@@ -89,7 +71,6 @@ def convert_to_seconds(stime):
 	else:
 	        secs=secs + ".000"
 
-	#return int(converted)
 	return secs
 
 #### retrieve terminal size ####
@@ -160,7 +141,7 @@ def print_slices(slices,show_info):
 	available_rows=int(rows)-menu_rows
 	slice_columns=math.ceil(len(slices)/available_rows)
 	slices_per_column=math.ceil(len(slices)/slice_columns)
-	separator=" "*5
+	#separator=" "*5
 
 	print("Selected slices:")
 	print("")
@@ -187,7 +168,9 @@ def print_slices(slices,show_info):
 		for c in range(slice_columns):
 			if num < len(slices):
 				(ss,se)=slices[num]
-				print_str=print_str + "#" + str(num) + " " + str(convert_to_minutes(ss)) + " - " + str(convert_to_minutes(se)) + separator
+				#print_str=print_str + "#" + str(num) + " " + str(convert_to_minutes(ss)) + " - " + str(convert_to_minutes(se)) + separator
+				print_str=print_str + "#" + str(num) + ")" + str(convert_to_minutes(ss)) + "-" + str(convert_to_minutes(se)) + separator
+				#print_str=print_str + "|#" + str(num) + " " + str(convert_to_minutes(ss)) + " - " + str(convert_to_minutes(se)) + " - len: " + str(convert_to_minutes(float(se)-float(ss))) + separator
 				num=num+(available_rows)
 		print_out.append(print_str)
 
@@ -800,9 +783,11 @@ else:
 			#size_coefficient=4
 			#bitrate=size_coefficient*8192
 			#bitrate=str(bitrate/sourceduration)+"M"
-			bitrate="0.2M"
+			#bitrate="0.2M"
+			bitrate="300"
 		else:
-		        bitrate=sourcebitrate+"M"
+		        #bitrate=sourcebitrate+"M"
+		        bitrate=sourcebitrate
 		
 		if not args.threads:
 			threads=4
