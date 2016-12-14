@@ -282,7 +282,7 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
 	
 		ffmpeg_command=ffmpeg_command + "concat=n=" + str(len(slices)) + ":v=1:a=1[out]\""
 		ffmpeg_command_pass1=ffmpeg_command + " -an -pass 1 -map \"[out]\" -f webm " + "/dev/null"
-		ffmpeg_command_pass2=ffmpeg_command + " -pass 2 -map \"[out]\" " + "-f webm \'" + destfile + "\'"
+		ffmpeg_command_pass2=ffmpeg_command + " -c:a libvorbis -q 0 -pass 2 -map \"[out]\" " + "-f webm \'" + destfile + "\'"
 		#ffmpeg_command=ffmpeg_command + "-map \"[out]\" " + "\'" + destfile + "\'"
 		#print("#### ffmpeg_command: " + "\"" + ffmpeg_command + "\"")
 
@@ -295,6 +295,44 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
 	except (ValueError, OSError) as err:
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
+def chan_renderer(sourcefile,slices,destfile,sourceduration,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads):
+	#### the idea is too keep rendering short samples while scaling down and then up resolution and bitrate 
+	#### up to the point where the sample size multiplied by the output duration are close and possibly a 
+	#### bit less than 4MB. ATM the sample will be the first slice defined.
+	(ss,se)=slices[0]
+	sample_lenght=float(se)-float(ss)
+
+	total_duration=0
+	for i in range(len(slices)):
+	        (ss,se)=slices[i]
+	        diff=float(se)-float(ss)
+	        total_duration=total_duration+diff
+	sample_to_full_ratio=total_duration/sample_lenght
+
+	#### let's try at native size/res to begin with
+	tempfile="/tmp/"+path+destfile+str(random.randint(0,1024))+ext
+	fmpeg_write_vo(sourcefile,slices[0],tempfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads)
+	sample_size=os.path.getsize(tempfile)
+	estimated_size=(sample_size*(1024^2))*sample_to_full_ratio
+
+	if estimated_size <= 4:
+		fmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads)
+	else:
+		size_sampling=True
+		divide_quality_by=2
+		while size_sampling:
+			#### let's start reducing resolution and bitrate
+			tempfile="/tmp/"+path+destfile+str(random.randint(0,1024))+ext
+			fmpeg_write_vo(sourcefile,slices[0],tempfile,sourcefps,sourcewidth/divide_quality_by,sourceheight/divide_quality_by,sourcebitrate/divide_quality_by,threads)
+			sample_size=os.path.getsize(tempfile)
+			estimated_size=(sample_size*(1024^2))*sample_to_full_ratio
+			if estimated_size <= 4:
+				fmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth/divide_quality_by,sourceheight/divide_quality_by,sourcebitrate/divide_quality_by,threads)
+				size_sampling=false
+			else:
+				divide_quality_by=divide_quality_by+2
+				
+
 def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate):
 	try:
 		#### encoder = either libx264 or libvpx
@@ -306,7 +344,7 @@ def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheig
 			(ss,se)=slices[i]
 
 			#### with libvpx options
-			ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -codec:v " + encoder + "  -quality good -cpu-used 0  -b:v " + str(sourcebitrate) + "k -qmin 10 -qmax 42 -s " + str(sourcewidth) + "x" + str(sourceheight) + " -threads " + str(threads) + " -filter_complex \""
+			ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -codec:v " + encoder + "  -quality good -cpu-used 0  -b:v " + str(sourcebitrate) + "k -qmin 10 -qmax 42 -s " + str(sourcewidth) + "x" + str(sourceheight) + "-c:a libvorbis -q 0 -threads " + str(threads) + " -filter_complex \""
 	
 	
 			ffmpeg_command=ffmpeg_command + "[0:v]trim="+ str(ss) + ":" + str(se) + ",setpts=PTS-STARTPTS[v" + str(i) + "]; "
@@ -346,7 +384,7 @@ def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
 	vo_slices = []
 
 	print("Encoding preview file: \"" + destfile + "\"")
-	ffmpeg_command="ffmpeg -stats -v quiet -i \'" + sourcefile + "\' -y -codec:v " + encoder + " -b:v " + str(bitrate) + " -s " + str(width) + "x" + str(height) + opts + " -filter_complex \""
+	ffmpeg_command="ffmpeg -stats -v quiet -i \'" + sourcefile + "\' -y -codec:v " + encoder + " -b:v " + str(bitrate) + " -s " + str(width) + "x" + str(height) + opts + " -c:a libvorbis -q 0 -filter_complex \""
 	for i in range(len(slices)):
 		(ss,se)=slices[i]
 		ffmpeg_command=ffmpeg_command + "[0:v]trim="+ str(ss) + ":" + str(se) + ",setpts=PTS-STARTPTS[todraw" + str(i) + "]; "
@@ -721,6 +759,12 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 						check_path(path)
 						targetfile=path+destfile.rsplit( "." ,1 )[0]
 						write_all_slices(sourcefile,slices,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate)
+
+					if int(chan_renderer_enabled) > 0:
+						path="./4C/"
+						check_path(path)
+						targetfile=path+destfile.rsplit( "." ,1 )[0]+"_4c.webm"
+						chan_render(sourcefile,slices,destfile,sourceduration,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads)
 
 					input("Encoding completed (Press ENTER to continue)")
 				else:
