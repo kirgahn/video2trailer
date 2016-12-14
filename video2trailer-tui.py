@@ -298,7 +298,7 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
 def chan_renderer(sourcefile,slices,destfile,sourceduration,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads):
 	#### the idea is too keep rendering short samples while scaling down and then up resolution and bitrate 
 	#### up to the point where the sample size multiplied by the output duration are close and possibly a 
-	#### bit less than 4MB. ATM the sample will be the first slice defined.
+	#### bit more than 3MB and a bit less than 4MB. ATM the sample is the first slice defined.
 	(ss,se)=slices[0]
 	sample_lenght=float(se)-float(ss)
 
@@ -315,22 +315,32 @@ def chan_renderer(sourcefile,slices,destfile,sourceduration,sourcefps,sourcewidt
 	sample_size=os.path.getsize(tempfile)
 	estimated_size=(sample_size*(1024^2))*sample_to_full_ratio
 
-	if estimated_size <= 4:
+	if estimated_size <= 4 and estimated_size > 3:
 		fmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads)
+
 	else:
-		size_sampling=True
-		divide_quality_by=2
-		while size_sampling:
-			#### let's start reducing resolution and bitrate
-			tempfile="/tmp/"+path+destfile+str(random.randint(0,1024))+ext
-			fmpeg_write_vo(sourcefile,slices[0],tempfile,sourcefps,sourcewidth/divide_quality_by,sourceheight/divide_quality_by,sourcebitrate/divide_quality_by,threads)
-			sample_size=os.path.getsize(tempfile)
-			estimated_size=(sample_size*(1024^2))*sample_to_full_ratio
-			if estimated_size <= 4:
-				fmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth/divide_quality_by,sourceheight/divide_quality_by,sourcebitrate/divide_quality_by,threads)
-				size_sampling=false
-			else:
-				divide_quality_by=divide_quality_by+2
+
+		#### let's start reducing resolution at a fixed res of bitrate of 100kpbs
+		tempfile="/tmp/"+path+destfile+str(random.randint(0,1024))+ext
+		#fmpeg_write_vo(sourcefile,slices[0],tempfile,sourcefps,sourcewidth/divide_quality_by,sourceheight/divide_quality_by,sourcebitrate/divide_quality_by,threads)
+		fmpeg_write_vo(sourcefile,slices[0],tempfile,25,432,240,100,threads)
+		sample_size=os.path.getsize(tempfile)
+		estimated_size=(sample_size*(1024^2))*sample_to_full_ratio
+
+		if estimated_size < 4 and estimated_size > 3:
+			print("Estimated size is " + str(estimated_size) + " @432x240x100kpbs, writing output: " + destfile)
+			fmpeg_write_vo(sourcefile,slices,destfile,25,432,240,100,threads)
+		elif estimated_size > 4:
+			input("Couldn't fit into target size at lowest settings (432x240x100kbps), quitting (Press ENTER to continue)")
+		else:
+			size_sampling=True
+			#divide_quality_by=2
+			while size_sampling:
+				if estimated_size < 4 and estimated_size > 3:
+					#fmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth/divide_quality_by,sourceheight/divide_quality_by,sourcebitrate/divide_quality_by,threads)
+					size_sampling=false
+				elif esitmated_size < 3:
+					divide_quality_by=divide_quality_by+2
 				
 
 def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate):
@@ -759,6 +769,8 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 						check_path(path)
 						targetfile=path+destfile.rsplit( "." ,1 )[0]
 						write_all_slices(sourcefile,slices,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate)
+					#### chan renderer call
+					chan_renderer_enabled=1 ### this is temporary
 
 					if int(chan_renderer_enabled) > 0:
 						path="./4C/"
