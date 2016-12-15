@@ -262,15 +262,21 @@ def remove_slice(slices):
                 input("Slice position is invalid. (Press ENTER to continue)")
 	return slices
 
-def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads):
+def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,constant_bitrate=0,crf_factor=30):
 	try:
 		#### encoder = either libx264 or libvpx
 		encoder="libvpx"
 		vo_slices = []
+		if constant_bitrate==0:
+			quality_opts=" -quality good -cpu-used 0 -qmin 10 -qmax 42 -crf 10 -b:v " + str(sourcebitrate) + "k"
+		else:
+			#### constant bitrate encoding... sucks, but it's precise because it forces a specific bitrate. 
+			#### Used for chan_renderer to respect the calculated optimal bitrate.
+			print("Encoding with constant bitrate of: " + str(sourcebitrate) + "kbps")
+			quality_opts=" -deadline good -cpu-used 0  -bufsize " + str(sourcebitrate*1000) + " -b:v "+ str(sourcebitrate) + "k -minrate "+ str(sourcebitrate) + "k -maxrate " + str(sourcebitrate) + "k -qmin " + str(crf_factor)+ " -qmax " + str(crf_factor) + " -error-resilient 1  -rc_buf_aggressivity 0.5 -crf "  + str(crf_factor)
 
 		#### with libvpx options
-		ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -codec:v " + encoder + "  -quality good -cpu-used 0  -b:v " + str(sourcebitrate) + "k -qmin 10 -qmax 42 -s " + str(sourcewidth) + "x" + str(sourceheight) + " -threads " + str(threads) + " -filter_complex \""
-		#ffmpeg_command="ffmpeg -stats -i " + "\'" + sourcefile + "\'" + " -y -codec:v " + encoder + "  -quality good -cpu-used 0  -b:v " + str(sourcebitrate) + "k -qmin 10 -qmax 42 -s " + str(sourcewidth) + "x" + str(sourceheight) + " -threads " + str(threads) + " -filter_complex \""
+		ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -r " + str(sourcefps) + " -codec:v " + encoder + quality_opts + " -s " + str(sourcewidth) + "x" + str(sourceheight) + " -c:a libvorbis -q 0 -threads " + str(threads) + " -filter_complex \""
 
 		for i in range(len(slices)):
 			(ss,se)=slices[i]
@@ -282,12 +288,15 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
 	
 		ffmpeg_command=ffmpeg_command + "concat=n=" + str(len(slices)) + ":v=1:a=1[out]\""
 		ffmpeg_command_pass1=ffmpeg_command + " -an -pass 1 -map \"[out]\" -f webm " + "/dev/null"
-		ffmpeg_command_pass2=ffmpeg_command + " -c:a libvorbis -q 0 -pass 2 -map \"[out]\" " + "-f webm \'" + destfile + "\'"
-		#ffmpeg_command=ffmpeg_command + "-map \"[out]\" " + "\'" + destfile + "\'"
-		#print("#### ffmpeg_command: " + "\"" + ffmpeg_command + "\"")
+		ffmpeg_command_pass2=ffmpeg_command + " -pass 2 -map \"[out]\" " + "-f webm \'" + destfile + "\'"
 
+		#### DEBUG
+		#print("#"*30)
 		#print("### 1:\'" + ffmpeg_command_pass1 + "\'")
+		#print("")
 		#print("### 2:\'" + ffmpeg_command_pass2 + "\'")
+		#print("#"*30)
+
 		os.system(ffmpeg_command_pass1)
 		os.system(ffmpeg_command_pass2)
 		os.remove("ffmpeg2pass-0.log")
@@ -295,53 +304,90 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
 	except (ValueError, OSError) as err:
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
-def chan_renderer(sourcefile,slices,destfile,sourceduration,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads):
-	#### the idea is too keep rendering short samples while scaling down and then up resolution and bitrate 
-	#### up to the point where the sample size multiplied by the output duration are close and possibly a 
-	#### bit more than 3MB and a bit less than 4MB. ATM the sample is the first slice defined.
-	(ss,se)=slices[0]
-	sample_lenght=float(se)-float(ss)
+def chan_renderer(sourcefile,slices,destfile,targetsize,targetfps,sourcewidth,sourceheight,threads):
+	#### The idea is to calculate the target size for the stream given that we know
+	#### both the target size and the clip duration.
+	#### we then proceed try several resolutions until we find the right combo
+	#### of resolution and bitrate givean that we know how many bits_per_pixel 
+	#### we whish to allocate.
+	#### bits per pixel is a quality coefficient and should be around 0.1
+	#### lower values like 0.03 mean horrible picture qulity, while  higher values 
+	#### mean that we are wasting data
 
+	#### let's find how long the final clip will last
 	total_duration=0
 	for i in range(len(slices)):
-	        (ss,se)=slices[i]
-	        diff=float(se)-float(ss)
-	        total_duration=total_duration+diff
-	sample_to_full_ratio=total_duration/sample_lenght
+		(ss,se)=slices[i]
+		diff=float(se)-float(ss)
+		total_duration=total_duration+diff
 
-	#### let's try at native size/res to begin with
-	tempfile="/tmp/"+path+destfile+str(random.randint(0,1024))+ext
-	fmpeg_write_vo(sourcefile,slices[0],tempfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads)
-	sample_size=os.path.getsize(tempfile)
-	estimated_size=(sample_size*(1024^2))*sample_to_full_ratio
+	audio_bitrate=64 #libvorbis -q 0 = 64kps
+	bits_per_pixel=0.1
+	fps=targetfps
+	
+	#### now we now the overall size and duration
+	#### and we know that bit_per_pixel=0.1 and 
+	#### that the audio stream is 64kbps
+	#### therefore we calculate how many pixels_per_second
+	#### we need at every resolution test and given that
+	#### bits_per_pixel*pixels_per_second is equal to
+	#### the needed bitrate, we calcuate the bitrate 
+	#### accordingly. This way, even at tiny resolutions
+	#### we'll always have a (proportionally) decent quality
+	
+	starting_width=sourcewidth
+	starting_height=sourceheight
+	#### approx_factor is used to determine the fork value between
+	#### a quality compromise is found. This is necessary because
+	#### even using the godawful constant bitrate quality that 
+	#### **should** enforce bitrate, the frigging encoder overshoots
+	#### anyway. So, if target_size is 4M, the estimated 
+	#### size that's considered to be ok has to be between
+	#### for e.g. 84% and 90% of 4M to avoid the encoder overshooting
+	#### to the point that the file exceeds 4M.
+	approx_factor_min=86
+	approx_factor_max=94
 
-	if estimated_size <= 4 and estimated_size > 3:
-		fmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads)
+	### cfr_factor is used to adapt quantizers and cfr (constant bitrate) quality
+	cfr_factor=30
 
-	else:
+	while True:
+		pixels_per_second = starting_width*starting_height*fps
+		bitrate=round(bits_per_pixel*pixels_per_second)
+		bitrate=bitrate-(audio_bitrate*1000)
+		print("trying with res:"+str(starting_width)+"x"+str(starting_height)+", bitrate: "+str(bitrate/1000)+"kbps",end='\r')
 
-		#### let's start reducing resolution at a fixed res of bitrate of 100kpbs
-		tempfile="/tmp/"+path+destfile+str(random.randint(0,1024))+ext
-		#fmpeg_write_vo(sourcefile,slices[0],tempfile,sourcefps,sourcewidth/divide_quality_by,sourceheight/divide_quality_by,sourcebitrate/divide_quality_by,threads)
-		fmpeg_write_vo(sourcefile,slices[0],tempfile,25,432,240,100,threads)
-		sample_size=os.path.getsize(tempfile)
-		estimated_size=(sample_size*(1024^2))*sample_to_full_ratio
+		MBrate=(bitrate/(1000*1000))*0.125
+		estimated_size=MBrate*total_duration
+		if estimated_size <= ((target_size*approx_factor_max)/100) and estimated_size > ((target_size*approx_factor_min)/100):
+			print("Optimal parameters found: resolution is "+str(starting_width)+"x"+str(starting_height)+", bitrate is "+str(bitrate/1000)+"kbps, estimated size is "+str(estimated_size)+"MB")
 
-		if estimated_size < 4 and estimated_size > 3:
-			print("Estimated size is " + str(estimated_size) + " @432x240x100kpbs, writing output: " + destfile)
-			fmpeg_write_vo(sourcefile,slices,destfile,25,432,240,100,threads)
-		elif estimated_size > 4:
-			input("Couldn't fit into target size at lowest settings (432x240x100kbps), quitting (Press ENTER to continue)")
+			ffmpeg_write_vo(sourcefile,slices,destfile,fps,starting_width,starting_height,bitrate/1000,threads,1,cfr_factor)
+			break
+		elif estimated_size > ((target_size*approx_factor_max)/100):
+			print("estimated size too big ("+str(estimated_size)+"), lets lower the resolution",end='\r')
+			starting_width=round(starting_width/1.4)
+			starting_height=round(starting_height/1.4)
+		elif estimated_size < ((target_size*approx_factor_min)/100):
+			print("estimated size too small ("+str(estimated_size)+"), lets up the resolution",end='\r')
+			starting_width=round(starting_width*1.2)
+			starting_height=round(starting_height*1.2)
+
+	#### we check if the encoded file is actually within target_size
+	#### if not, we remove it and we decrease the quality by increasing
+	#### cfr_factor. If cfr_factor ends higher then the max codec allowed value (63)
+	#### we simply surrender.
+	real_size=(os.path.getsize(destfile)/(1024*1024))
+	while real_size > target_size:
+		print("Looks like the encoder overshoot too much, the output file is actually bigger than the target size, let's re-encode it with lower quality")
+		cfr_factor=round((cfr_factor/target_size)*real_size)
+		if cfr_factor > 63:
+			print("Surpassed lowest cfr value (63), I quit!")
+			break
 		else:
-			size_sampling=True
-			#divide_quality_by=2
-			while size_sampling:
-				if estimated_size < 4 and estimated_size > 3:
-					#fmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth/divide_quality_by,sourceheight/divide_quality_by,sourcebitrate/divide_quality_by,threads)
-					size_sampling=false
-				elif esitmated_size < 3:
-					divide_quality_by=divide_quality_by+2
-				
+			os.system("rm " +  destfile)
+			ffmpeg_write_vo(sourcefile,slices,destfile,fps,starting_width,starting_height,bitrate/1000,threads,1,cfr_factor)
+			real_size=(os.path.getsize(destfile)/(1024*1024))
 
 def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate):
 	try:
@@ -354,7 +400,7 @@ def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheig
 			(ss,se)=slices[i]
 
 			#### with libvpx options
-			ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -codec:v " + encoder + "  -quality good -cpu-used 0  -b:v " + str(sourcebitrate) + "k -qmin 10 -qmax 42 -s " + str(sourcewidth) + "x" + str(sourceheight) + "-c:a libvorbis -q 0 -threads " + str(threads) + " -filter_complex \""
+			ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -r " + str(sourcefps) + " -codec:v " + encoder + "  -quality good -cpu-used 0  -b:v " + str(sourcebitrate) + "k -qmin 10 -qmax 42 -s " + str(sourcewidth) + "x" + str(sourceheight) + "-c:a libvorbis -q 0 -threads " + str(threads) + " -filter_complex \""
 	
 	
 			ffmpeg_command=ffmpeg_command + "[0:v]trim="+ str(ss) + ":" + str(se) + ",setpts=PTS-STARTPTS[v" + str(i) + "]; "
@@ -366,18 +412,10 @@ def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheig
 			#print("#### ffmpeg_command: " + "\"" + ffmpeg_command + "\"")
 	
 			try:
-				#print(ffmpeg_command)
 				os.system(ffmpeg_command)
 			except OSError as err:
 				input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
-#		confirm=input("Would you like to watch the output file (y/n)")
-#		if confirm == "y" or confirm == "Y" or confirm == "":
-#			xdg_open(destfile)
-
-#		if int(target_size) > 0:
-#			compress(destfile,target_size,fps,width,threads)
-		
 	except (ValueError, OSError) as err:
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
@@ -433,17 +471,18 @@ def change_settings(destfile,fps,width,bitrate,threads,target_size,write_full_qu
 			## Settings Menu
 			print_title()
 			print("")
-			print("1) (O)utput Filename (" + destfile + ")")
-			print("2) (F)ps (" + str(fps) + ")")
-			print("3) (W)idth (" + str(width) + ")")
-			print("4) (B)itrate (" + bitrate + ")")
-			print("5) encoder (T)hreads (" + str(threads) + ")")
+			print("1) (o)utput Filename (" + destfile + ")")
+			print("2) (f)ps (" + str(fps) + ")")
+			print("3) (w)idth (" + str(width) + ")")
+			print("4) (b)itrate (" + bitrate + ")")
+			print("5) encoder (t)hreads (" + str(threads) + ")")
 			#print("6) (C)ompressed video target size (0 means no further compression) (" + str(target_size) + ")")
 			#print("6) (C)ompress output video to ./variable (0 means no, >1 means yes) (" + str(target_size) + ")")
-			print("6) F(u)ll quality video output (" + str(write_full_quality) + ")")
-			print("7) (C)ustom quality video output (" + str(write_custom_quality) + ")")
-			print("8) (S)lices output (" + str(write_slices) + ")")
-			print("9) (Quit) to main menu")
+			print("6) f(u)ll quality video output (" + str(write_full_quality) + ")")
+			print("7) (c)ustom quality video output (" + str(write_custom_quality) + ")")
+			print("8) (s)lices output (" + str(write_slices) + ")")
+			print("9) co(n)stant bitrate output target size (0 means do not encode, any int >0 is the target size in MB) (" + str(target_size) + ")")
+			print("10) (q)uit to main menu")
 			print("")
 			print_separator()
 	
@@ -474,10 +513,10 @@ def change_settings(destfile,fps,width,bitrate,threads,target_size,write_full_qu
 				write_custom_quality = input("custom quality output: ")
 			elif any(q in settings_choice for q in ["8","S","s"]):
 				write_slices = input("write each slice as its own video: ")
-			#elif any(q in settings_choice for q in ["6","C","c"]):
-			#	new_target_size = input("target size: ")
-			#	target_size=new_target_size
-			elif any(q in settings_choice for q in ["7","Q","q"]):
+			elif any(q in settings_choice for q in ["9","N","n"]):
+				new_target_size = input("target size: ")
+				target_size=new_target_size
+			elif any(q in settings_choice for q in ["10","Q","q"]):
 				settings_loop=True
 		return (destfile,fps,width,bitrate,threads,target_size,write_full_quality,write_custom_quality,write_slices)
 	except (ValueError, OSError) as err:
@@ -607,11 +646,6 @@ def parse_ffprobe_info(sourcefile):
 	#### Ask ffmpeg to provide a json with info about the video that we're going to parse
 	command='ffprobe -v quiet -print_format json -show_format -show_streams \'' + sourcefile + "\'"
 	stream_info = subprocess.getoutput(command)
-	#stream_info=subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-	#stream_info=stream_info.communicate()[0]
-	#stream_info=bytes(stream_info.communicate()[0],"utf-8")
-	#stream_info=bytes(stream_info.communicate()[0],"Windows-1252")
-	#stream_info=bytes(stream_info,"utf-8")
 	j = json.loads(stream_info)
 	
 	#### ['streams'] is an array that includes audio and video streams
@@ -737,12 +771,12 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 					input("No defined slice! (Press ENTER to continue)")
 			elif any(q in slices_choice for q in ["9","W","w"]):
 				if slices:
-					ext=".webm" #either .mp4 or .webm
-
+					ext=".webm" 
+					#### write the full quality webm
+					#### targetfile is destfile less the file extension (first thing after "." starting from 
+					#### the right plus resolution and extension: "_WIDTHxHEIGHT.webm"
 					if int(write_full_quality) > 0:
-						#### write the full quality webm
-						#### targetfile is destfile less the file extension (first thing after "." starting from 
-						#### the right plus resolution and extension: "_WIDTHxHEIGHT.webm"
+
 						path="./full/"
 						check_path(path)
 						targetfile=path+destfile.rsplit( "." ,1 )[0]+"_"+str(sourcewidth)+"x"+str(sourceheight)+ext
@@ -769,14 +803,13 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 						check_path(path)
 						targetfile=path+destfile.rsplit( "." ,1 )[0]
 						write_all_slices(sourcefile,slices,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate)
-					#### chan renderer call
-					chan_renderer_enabled=1 ### this is temporary
 
-					if int(chan_renderer_enabled) > 0:
-						path="./4C/"
+					#### chan renderer call
+					if int(target_size) > 0:
+						path="./constant/"
 						check_path(path)
-						targetfile=path+destfile.rsplit( "." ,1 )[0]+"_4c.webm"
-						chan_render(sourcefile,slices,destfile,sourceduration,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads)
+						targetfile=path+destfile.rsplit( "." ,1 )[0]+"_cfr.webm"
+						chan_renderer(sourcefile,slices,targetfile,target_size,25,sourcewidth,sourceheight,threads)
 
 					input("Encoding completed (Press ENTER to continue)")
 				else:
