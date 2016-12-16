@@ -272,7 +272,7 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
 		else:
 			#### constant bitrate encoding... sucks, but it's precise because it forces a specific bitrate. 
 			#### Used for chan_renderer to respect the calculated optimal bitrate.
-			print("Encoding with constant bitrate of: " + str(sourcebitrate) + "kbps")
+			print("Encoding with constant bitrate of: " + str(sourcebitrate) + "kbps, crf_factor: " + str(crf_factor))
 			quality_opts=" -deadline good -cpu-used 0  -bufsize " + str(sourcebitrate*1000) + " -b:v "+ str(sourcebitrate) + "k -minrate "+ str(sourcebitrate) + "k -maxrate " + str(sourcebitrate) + "k -qmin " + str(crf_factor)+ " -qmax " + str(crf_factor) + " -error-resilient 1  -rc_buf_aggressivity 0.5 -crf "  + str(crf_factor)
 
 		#### with libvpx options
@@ -305,13 +305,13 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
 def chan_renderer(sourcefile,slices,destfile,targetsize,targetfps,sourcewidth,sourceheight,threads):
-	#### The idea is to calculate the target size for the stream given that we know
+	#### the idea is to calculate the target size for the stream given that we know
 	#### both the target size and the clip duration.
 	#### we then proceed try several resolutions until we find the right combo
-	#### of resolution and bitrate givean that we know how many bits_per_pixel 
+	#### of resolution and bitrate given that we know how many bits_per_pixel 
 	#### we whish to allocate.
-	#### bits per pixel is a quality coefficient and should be around 0.1
-	#### lower values like 0.03 mean horrible picture qulity, while  higher values 
+	#### bits_per_pixel is a quality coefficient and should be around 0.1.
+	#### lower values like 0.03 mean horrible picture quality, while higher values 
 	#### mean that we are wasting data
 
 	#### let's find how long the final clip will last
@@ -325,31 +325,33 @@ def chan_renderer(sourcefile,slices,destfile,targetsize,targetfps,sourcewidth,so
 	bits_per_pixel=0.1
 	fps=targetfps
 	
-	#### now we now the overall size and duration
-	#### and we know that bit_per_pixel=0.1 and 
-	#### that the audio stream is 64kbps
+	#### now we now the overall size, duration, audio bitrate (64kbps)
+	#### and we know that bit_per_pixel=0.1 
 	#### therefore we calculate how many pixels_per_second
-	#### we need at every resolution test and given that
+	#### we need at every resolution test. given that
 	#### bits_per_pixel*pixels_per_second is equal to
-	#### the needed bitrate, we calcuate the bitrate 
-	#### accordingly. This way, even at tiny resolutions
+	#### the needed bitrate, we calcuate the bitrate each time
+	#### accordingly. this way, even at tiny resolutions,
 	#### we'll always have a (proportionally) decent quality
 	
-	starting_width=sourcewidth
-	starting_height=sourceheight
-	#### approx_factor is used to determine the fork value between
-	#### a quality compromise is found. This is necessary because
+	starting_width=int(sourcewidth)
+	starting_height=int(sourceheight)
+	#### approx_factor are used to determine the fork value between
+	#### the minimum and maximum acceptable target sizes when
+	#### a quality compromise is found. this is necessary because,
 	#### even using the godawful constant bitrate quality that 
 	#### **should** enforce bitrate, the frigging encoder overshoots
 	#### anyway. So, if target_size is 4M, the estimated 
 	#### size that's considered to be ok has to be between
-	#### for e.g. 84% and 90% of 4M to avoid the encoder overshooting
+	#### for e.g. 84% and 90% of 4M. that's to avoid the encoder overshooting
 	#### to the point that the file exceeds 4M.
-	approx_factor_min=86
-	approx_factor_max=94
+	#approx_factor_min=86
+	#approx_factor_max=94
+	approx_factor_min=90
+	approx_factor_max=96
 
 	### cfr_factor is used to adapt quantizers and cfr (constant bitrate) quality
-	cfr_factor=30
+	cfr_factor=40
 
 	while True:
 		pixels_per_second = starting_width*starting_height*fps
@@ -366,23 +368,27 @@ def chan_renderer(sourcefile,slices,destfile,targetsize,targetfps,sourcewidth,so
 			break
 		elif estimated_size > ((target_size*approx_factor_max)/100):
 			print("estimated size too big ("+str(estimated_size)+"), lets lower the resolution",end='\r')
-			starting_width=round(starting_width/1.4)
-			starting_height=round(starting_height/1.4)
+			#starting_width=round(starting_width/0.5)
+			#starting_height=round(starting_height/0.5)
+			starting_width=math.floor(starting_width/1.4)
+			starting_height=math.floor(starting_height/1.4)
 		elif estimated_size < ((target_size*approx_factor_min)/100):
 			print("estimated size too small ("+str(estimated_size)+"), lets up the resolution",end='\r')
-			starting_width=round(starting_width*1.2)
-			starting_height=round(starting_height*1.2)
+			#starting_width=round(starting_width*1.2)
+			#starting_height=round(starting_height*1.2)
+			starting_width=math.floor(starting_width*1.2)
+			starting_height=math.floor(starting_height*1.2)
 
 	#### we check if the encoded file is actually within target_size
 	#### if not, we remove it and we decrease the quality by increasing
 	#### cfr_factor. If cfr_factor ends higher then the max codec allowed value (63)
 	#### we simply surrender.
 	real_size=(os.path.getsize(destfile)/(1024*1024))
-	while real_size > target_size:
-		print("Looks like the encoder overshoot too much, the output file is actually bigger than the target size, let's re-encode it with lower quality")
+	while (real_size > target_size) or (real_size < (target_size*approx_factor_min)/100):
 		cfr_factor=round((cfr_factor/target_size)*real_size)
+		print("Looks like the output file size differs too much ("+str(real_size)+"MB), let's tweak the quality (cfr:"+str(cfr_factor)+")")
 		if cfr_factor > 63:
-			print("Surpassed lowest cfr value (63), I quit!")
+			print("Surpassed lowest quality cfr value (63), I quit!")
 			break
 		else:
 			os.system("rm " +  destfile)
@@ -700,7 +706,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 			print("6) (e)dit all slices")
 			print("7) (s)lice preview")
 			print("8) (p)review clip")
-			print("9) (w)rite destination file")
+			print("9) (w)rite destination file/s")
 			print("10) (q)uit to main menu")
 			print("")
 			print_separator()
