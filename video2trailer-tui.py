@@ -324,6 +324,7 @@ def chan_renderer(sourcefile,slices,destfile,targetsize,targetfps,sourcewidth,so
 	audio_bitrate=64 #libvorbis -q 0 = 64kps
 	bits_per_pixel=0.1
 	fps=targetfps
+	targetsize=int(targetsize)
 	
 	#### now we now the overall size, duration, audio bitrate (64kbps)
 	#### and we know that bit_per_pixel=0.1 
@@ -380,13 +381,21 @@ def chan_renderer(sourcefile,slices,destfile,targetsize,targetfps,sourcewidth,so
 			starting_height=math.floor(starting_height*1.2)
 
 	#### we check if the encoded file is actually within target_size
-	#### if not, we remove it and we decrease the quality by increasing
+	#### if not, we remove it and we decrease/increase the quality by changing
 	#### cfr_factor. If cfr_factor ends higher then the max codec allowed value (63)
 	#### we simply surrender.
 	real_size=(os.path.getsize(destfile)/(1024*1024))
 	while (real_size > target_size) or (real_size < (target_size*approx_factor_min)/100):
+		print("Looks like the output file size differs too much ("+str(real_size)+"MB), let's tweak the quality accordingly (cfr:"+str(cfr_factor)+")")
+		#### DEBUG:
+		#print("target_size: "+str(target_size))
+		#print("real_size: "+str(real_size))
+		#print("crf_factor calculation: round(("+str(cfr_factor)+"/"+str(target_size)+")*"+str(real_size)+")")
 		cfr_factor=round((cfr_factor/target_size)*real_size)
-		print("Looks like the output file size differs too much ("+str(real_size)+"MB), let's tweak the quality (cfr:"+str(cfr_factor)+")")
+
+		#### DEBUG:
+		#print("calculated crf_factor: "+str(cfr_factor))
+
 		if cfr_factor > 63:
 			print("Surpassed lowest quality cfr value (63), I quit!")
 			break
@@ -485,9 +494,9 @@ def change_settings(destfile,fps,width,bitrate,threads,target_size,write_full_qu
 			#print("6) (C)ompressed video target size (0 means no further compression) (" + str(target_size) + ")")
 			#print("6) (C)ompress output video to ./variable (0 means no, >1 means yes) (" + str(target_size) + ")")
 			print("6) f(u)ll quality video output (" + str(write_full_quality) + ")")
-			print("7) (c)ustom quality video output (" + str(write_custom_quality) + ")")
+			print("7) (v)ariable bitrate video output (" + str(write_custom_quality) + ")")
 			print("8) (s)lices output (" + str(write_slices) + ")")
-			print("9) co(n)stant bitrate output target size (0 means do not encode, any int >0 is the target size in MB) (" + str(target_size) + ")")
+			print("9) (c)onstant bitrate output target size (0 means do not encode, any int >0 is the target size in MB) (" + str(target_size) + ")")
 			print("10) (q)uit to main menu")
 			print("")
 			print_separator()
@@ -515,11 +524,11 @@ def change_settings(destfile,fps,width,bitrate,threads,target_size,write_full_qu
 				threads=new_threads
 			elif any(q in settings_choice for q in ["6","U","u"]):
 				write_full_quality = input("full quality output: ")
-			elif any(q in settings_choice for q in ["7","C","c"]):
-				write_custom_quality = input("custom quality output: ")
+			elif any(q in settings_choice for q in ["7","V","v"]):
+				write_custom_quality = input("variable bitrate output: ")
 			elif any(q in settings_choice for q in ["8","S","s"]):
 				write_slices = input("write each slice as its own video: ")
-			elif any(q in settings_choice for q in ["9","N","n"]):
+			elif any(q in settings_choice for q in ["9","C","c"]):
 				new_target_size = input("target size: ")
 				target_size=new_target_size
 			elif any(q in settings_choice for q in ["10","Q","q"]):
