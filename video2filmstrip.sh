@@ -73,8 +73,8 @@ do
 	done;
 
 	framelist=$framelist"$tmpdir/_tmp$i.jpg "
-	convert $tmpdir/_tmp$i.jpg -fill black -gravity Southwest -pointsize 14 -annotate +0+0 $frametimehours $tmpdir/_tmp$i.jpg
-	convert $tmpdir/_tmp$i.jpg -fill white -gravity Southwest -pointsize 14 -annotate +1+1 $frametimehours $tmpdir/_tmp$i.jpg
+	convert $tmpdir/_tmp$i.jpg -fill black -font /usr/share/fonts/TTF/DejaVuSans.ttf -gravity Southwest -pointsize 14 -annotate +0+0 $frametimehours $tmpdir/_tmp$i.jpg
+	convert $tmpdir/_tmp$i.jpg -fill white -font /usr/share/fonts/TTF/DejaVuSans.ttf -gravity Southwest -pointsize 14 -annotate +1+1 $frametimehours $tmpdir/_tmp$i.jpg
 
 	if [ "$quiet" != "true"  ];
 	then
