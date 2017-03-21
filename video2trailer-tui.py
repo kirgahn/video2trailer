@@ -659,7 +659,7 @@ def external_edit(slices,editor):
 
 def parse_ffprobe_info(sourcefile):
 	#### Ask ffmpeg to provide a json with info about the video that we're going to parse
-	command='ffprobe -v quiet -print_format json -show_format -show_streams \'' + sourcefile + "\'"
+	command='ffprobe -v quiet -print_format json -show_format -show_streams \"' + sourcefile + "\""
 	stream_info = subprocess.getoutput(command)
 	j = json.loads(stream_info)
 	
