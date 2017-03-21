@@ -462,8 +462,8 @@ def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
 
 	subprocess.call(ffmpeg_command,shell=True)
 
-#	### DEBUG 
-#	print(ffmpeg_command)
+	### DEBUG 
+	#print(ffmpeg_command)
 
 	print("(p) to watch the preview file, (r) to remove the preview file, (q) to resume editing ")
 	while True:
