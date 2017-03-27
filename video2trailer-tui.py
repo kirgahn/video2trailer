@@ -299,7 +299,7 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
 		#print("### 2:\'" + ffmpeg_command_pass2 + "\'")
 		#print("#"*30)
 
-		print("Starting enconding now")
+		print("Enconding to: " + destfile)
 		start_time=time.time()
 
 		os.system(ffmpeg_command_pass1)
