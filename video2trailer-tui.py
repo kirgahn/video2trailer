@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 
 import random
-from datetime import datetime, timedelta, time
+#from datetime import datetime, timedelta, time
+from datetime import datetime, timedelta
+import time
 import mimetypes
 import os
 import sys
@@ -297,9 +299,16 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
 		#print("### 2:\'" + ffmpeg_command_pass2 + "\'")
 		#print("#"*30)
 
+		print("Starting enconding now")
+		start_time=time.time()
+
 		os.system(ffmpeg_command_pass1)
 		os.system(ffmpeg_command_pass2)
 		os.remove("ffmpeg2pass-0.log")
+
+		end_time=time.time()
+		elapsed_time=convert_to_minutes(end_time-start_time)
+		print("Time elapsed: " + elapsed_time)
 		
 	except (ValueError, OSError) as err:
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
