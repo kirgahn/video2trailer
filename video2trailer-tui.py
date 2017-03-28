@@ -417,6 +417,9 @@ def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheig
 	try:
 		#### encoder = either libx264 or libvpx
 		encoder="libvpx"
+
+		start_time=time.time()
+
 		vo_slices = []
 		for i in range(len(slices)):
 			outfile="\'" + destfile + "_" + str(i) + ".webm\'"
@@ -424,8 +427,7 @@ def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheig
 			(ss,se)=slices[i]
 
 			#### with libvpx options
-			ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -r " + str(sourcefps) + " -codec:v " + encoder + "  -quality good -cpu-used 0  -b:v " + str(sourcebitrate) + "k -qmin 10 -qmax 42 -s " + str(sourcewidth) + "x" + str(sourceheight) + "-c:a libvorbis -q 0 -threads " + str(threads) + " -filter_complex \""
-	
+			ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -r " + str(sourcefps) + " -codec:v " + encoder + "  -quality good -cpu-used 0  -b:v " + str(sourcebitrate) + "k -qmin 10 -qmax 42 -s " + str(sourcewidth) + "x" + str(sourceheight) + " -c:a libvorbis -q 0 -threads " + str(threads) + " -filter_complex \""
 	
 			ffmpeg_command=ffmpeg_command + "[0:v]trim="+ str(ss) + ":" + str(se) + ",setpts=PTS-STARTPTS[v" + str(i) + "]; "
 			ffmpeg_command=ffmpeg_command + "[0:a]atrim="+ str(ss) + ":" + str(se) + ",asetpts=PTS-STARTPTS[a" + str(i) + "]; "
@@ -436,9 +438,18 @@ def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheig
 			#print("#### ffmpeg_command: " + "\"" + ffmpeg_command + "\"")
 	
 			try:
-				os.system(ffmpeg_command)
+				print("Enconding to: " + destfile)
+
+			
+				subprocess.call(ffmpeg_command,shell=True)
+				#os.system(ffmpeg_command)
+			
 			except OSError as err:
 				input("Error: {0}".format(err) + " (Press ENTER to continue)")
+
+			end_time=time.time()
+			elapsed_time=convert_to_minutes(end_time-start_time)
+			print("Time elapsed: " + elapsed_time)
 
 	except (ValueError, OSError) as err:
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
@@ -469,7 +480,15 @@ def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
 	ffmpeg_command=ffmpeg_command + "concat=n=" + str(len(slices)) + ":v=1:a=1[out]\" "
 	ffmpeg_command=ffmpeg_command + "-map \"[out]\" " + "\'" + destfile + "\'"
 
+	print("Enconding to: " + destfile)
+	start_time=time.time()
+
 	subprocess.call(ffmpeg_command,shell=True)
+
+	end_time=time.time()
+	elapsed_time=convert_to_minutes(end_time-start_time)
+	print("Time elapsed: " + elapsed_time)
+
 
 	### DEBUG 
 	#print(ffmpeg_command)
@@ -804,7 +823,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 						path="./full/"
 						check_path(path)
 						targetfile=path+destfile.rsplit( "." ,1 )[0]+"_"+str(sourcewidth)+"x"+str(sourceheight)+ext
-						print("encoding with full quality output: " +targetfile)
+						#print("encoding with full quality output: " +targetfile)
 						ffmpeg_write_vo(sourcefile,slices,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads)
 
 					#### write the custom quality version
@@ -853,9 +872,9 @@ title = "|| video2trailer ||"
 player="mplayer -loop 0 -osd-fractions 1"
 editor="vim"
 
-write_full_quality=1
+write_full_quality=0
 write_custom_quality=1
-write_slices=1
+write_slices=0
 
 sourcefile = args.sourcefile
 
@@ -873,7 +892,6 @@ else:
 
 	try:
 		with open(state_file_name,encoding='utf-8'):
-			#(destfile,fps,width,bitrate,threads,target_size,slices) = load_state(state_file_name)
 			(destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,write_slices) = load_state(state_file_name)
 	except (ValueError, OSError):
 
@@ -893,29 +911,24 @@ else:
 		else:
 		        width=args.width
 		if not args.bitrate:
-			#size_coefficient=4
-			#bitrate=size_coefficient*8192
-			#bitrate=str(bitrate/sourceduration)+"M"
-			#bitrate="0.2M"
-			bitrate="300"
+			bitrate="400"
 		else:
-		        #bitrate=sourcebitrate+"M"
 		        bitrate=sourcebitrate
 		
 		if not args.threads:
-			threads=4
+			threads=3
 		else:
 			threads=args.threads
 
 		if not args.targetsize:
-			target_size=4
+			target_size=0
 		else:
 			target_size=args.targetsize
 
 
 ## MAIN LOOP BEGINS HERE
 quit_loop=False
-show_info=False
+show_info=True
 
 try:
 	while not quit_loop:
@@ -932,11 +945,10 @@ try:
 		print("3) (e)dit clip")
 		print("4) (c)hange settings")
 		print("5) (s)ave state file")
-		print("6) show sourcefile (i)nfo")
+		print("6) show (i)nfo")
 		print("7) (q)uit")
 		print("")
 		print_separator()
-		
 
 		choice=input("# ")
 		
