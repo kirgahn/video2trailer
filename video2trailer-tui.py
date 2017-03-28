@@ -878,6 +878,9 @@ write_slices=0
 
 sourcefile = args.sourcefile
 
+if not os.path.isfile(sourcefile):
+	raise SystemExit("Can't open file \"" + sourcefile + "\" for reading! Quitting now." )
+
 if sourcefile.lower().endswith(('.v2t')):
 	state_file_name=sourcefile
 	(destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,write_slices) = load_state(state_file_name)
