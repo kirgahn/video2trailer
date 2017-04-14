@@ -578,8 +578,9 @@ def load_state(state_file_name):
 			state_file.readline().strip()
 			#### the third line is to ignore the legacy "video" variable
 			#### it may be reused in the future
-			state_file.readline().strip()
+			#state_file.readline().strip()
 			#video = VideoFileClip(state_file.readline().rstrip())
+			sourcefile = state_file.readline().rstrip()
 				
 			destfile = state_file.readline().rstrip()
 			fps = int(state_file.readline().rstrip())
@@ -603,7 +604,7 @@ def load_state(state_file_name):
 				se=convert_to_seconds(slice_line.split('-')[1])
 				slices.append([ss,se])
 
-		return (destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,write_slices)
+		return (sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,write_slices)
 
 	except (ValueError, OSError) as err:
 		print("Can't parse state file!")
@@ -613,11 +614,12 @@ def load_state(state_file_name):
 def save_state(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,write_slices):
 	line_number = 0
 	
-	if sourcefile.find(".v2t")>0:
-		state_file_name=sourcefile
-		sourcefile=os.path.splitext(sourcefile)[0]
-	else:
-		state_file_name=sourcefile + ".v2t"
+	#if sourcefile.find(".v2t")>0:
+	#	state_file_name=sourcefile
+	#	sourcefile=os.path.splitext(sourcefile)[0]
+	#else:
+	#	state_file_name=sourcefile + ".v2t"
+	state_file_name=destfile + ".v2t"
 
 	try:
 		with open(state_file_name,mode='w', encoding='utf-8') as state_file:
@@ -883,8 +885,8 @@ if not os.path.isfile(sourcefile):
 
 if sourcefile.lower().endswith(('.v2t')):
 	state_file_name=sourcefile
-	(destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,write_slices) = load_state(state_file_name)
-	sourcefile=os.path.splitext(sourcefile)[0]
+	(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,write_slices) = load_state(state_file_name)
+	#sourcefile=os.path.splitext(sourcefile)[0]
 	
 	(sourcewidth,sourceheight,sourcefps,sourcebitrate,sourceduration)=parse_ffprobe_info(sourcefile)
 
@@ -895,7 +897,7 @@ else:
 
 	try:
 		with open(state_file_name,encoding='utf-8'):
-			(destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,write_slices) = load_state(state_file_name)
+			(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,write_slices) = load_state(state_file_name)
 	except (ValueError, OSError):
 
 		slices = []
