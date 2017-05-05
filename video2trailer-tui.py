@@ -133,7 +133,8 @@ def print_duration(slices):
 		total_duration=total_duration+diff
 	print("Total video lenght: " + str(convert_to_minutes(total_duration)) )
 	
-def print_slices(slices,show_info):
+def print_slices(slices,show_info,show_slice_lenght):
+
 	(columns,rows)=os.get_terminal_size()
 	if show_info:
 		menu_rows=23
@@ -170,9 +171,10 @@ def print_slices(slices,show_info):
 		for c in range(slice_columns):
 			if num < len(slices):
 				(ss,se)=slices[num]
-				#print_str=print_str + "#" + str(num) + " " + str(convert_to_minutes(ss)) + " - " + str(convert_to_minutes(se)) + separator
-				print_str=print_str + "#" + str(num) + ")" + str(convert_to_minutes(ss)) + "-" + str(convert_to_minutes(se)) + separator
-				#print_str=print_str + "|#" + str(num) + " " + str(convert_to_minutes(ss)) + " - " + str(convert_to_minutes(se)) + " - len: " + str(convert_to_minutes(float(se)-float(ss))) + separator
+				if show_slice_lenght:
+					print_str=print_str + "#" + str(num) + ")" + str(convert_to_minutes(ss)) + "-" + str(convert_to_minutes(se)) + "-len: " + str(float(se)-float(ss)) + separator
+				else:
+					print_str=print_str + "#" + str(num) + ")" + str(convert_to_minutes(ss)) + "-" + str(convert_to_minutes(se)) + separator
 				num=num+(available_rows)
 		print_out.append(print_str)
 
@@ -656,7 +658,9 @@ def save_state(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,
 
 #### Edit slices with an external editor ####
 def external_edit(slices,editor):
-	tmpfile='/tmp/' + destfile+str(random.randint(0,1024))+".edit.v2t"
+	state_path='./states/'
+	check_path(state_path)
+	tmpfile=state_path + destfile+str(random.randint(0,1024))+".edit.v2t"
 	try:
 		with open(tmpfile,mode='w', encoding='utf-8') as state_file:
                         for i in range(len(slices)):
@@ -679,7 +683,7 @@ def external_edit(slices,editor):
 			        #a_line += 1
 
                 #input("State saved correctly (Press ENTER to continue)")
-		os.remove(tmpfile)
+		#os.remove(tmpfile)
 		
 		return(slices)
 
@@ -726,7 +730,7 @@ def print_source_info(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth
 	print("source file: \"" + sfilename + "\"") 
 	print("resolution: " + str(sourcewidth) + "x" + str(sourceheight) + " - fps: " + str(fps) + " - bitrate: " + str(sourcebitrate) + "k - lenght: " + str(convert_to_minutes(sourceduration)))
 
-def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourceheight,sourcefps,show_info):
+def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourceheight,sourcefps,show_info,show_slice_lenght):
 	try:
 		slices_loop=False
 		while not slices_loop:
@@ -746,13 +750,14 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 			print("7) (s)lice preview")
 			print("8) (p)review clip")
 			print("9) (w)rite destination file/s")
-			print("10) (q)uit to main menu")
+			print("10) (t)oggle slice lenght")
+			print("11) (q)uit to main menu")
 			print("")
 			print_separator()
 			
 			if slices:
 				print_duration(slices)
-				print_slices(slices,show_info)
+				print_slices(slices,show_info,show_slice_lenght)
 	
 	
 			slices_choice=input("# ")
@@ -859,7 +864,9 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 					input("Encoding completed (Press ENTER to continue)")
 				else:
 					input("No defined slice! (Press ENTER to continue)")
-			elif any(q in slices_choice for q in ["10","Q","q"]):
+			elif any(q in slices_choice for q in ["10","T","t"]):
+				show_slice_lenght=not show_slice_lenght
+			elif any(q in slices_choice for q in ["11","Q","q"]):
 				slices_loop=True
 		return slices
 	except (ValueError, OSError) as err:
@@ -934,6 +941,7 @@ else:
 ## MAIN LOOP BEGINS HERE
 quit_loop=False
 show_info=True
+show_slice_lenght=False
 
 try:
 	while not quit_loop:
@@ -963,7 +971,7 @@ try:
 			print_separator()
 			video2filmstrip(sourcefile)
 		elif any(q in choice for q in ["3","E","e"]):
-			slices = slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourceheight,sourcefps,show_info)
+			slices = slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourceheight,sourcefps,show_info,show_slice_lenght)
 		elif any(q in choice for q in ["4","c","c"]):
 			(destfile,fps,width,bitrate,threads,target_size,write_full_quality,write_custom_quality,write_slices) = change_settings(destfile,fps,width,bitrate,threads,target_size,write_full_quality,write_custom_quality,write_slices)
 		elif any(q in choice for q in ["5","i","i"]):
