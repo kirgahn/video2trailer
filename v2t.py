@@ -458,8 +458,6 @@ def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheig
 
 def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
 
-	#### using mp4 format for faster preview rendering
-	ext="mp4"
 	#encoder="libx264" ### either x264/mp4 or libvpx/webm
 	encoder="libvpx" ### either x264/mp4 or libvpx/webm
 	font="DejaVuSans-Bold.ttf"
