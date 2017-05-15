@@ -1,12 +1,12 @@
 # python-video2webm-tools
-small tools I did for myself using glob2 an moviepy
-dependecies:
-python3
-ffmpeg
-imagemagik
-mplayer
+* v2t is a simple command line non-linear video editor used to edit a video file and generate webms (using VP8 for legacy reasons)
+* v2f is a simple bash script used to generate a preview filmstrip out of a video file
 
-use pip install for (theese shouldn't be needed for vide2trailertui):
-MoviePy 
-glob2
-Pillow
+dependecies(***):
+* python3
+* ffmpeg
+* imagemagik
+* mplayer
+* feh
+
+*** some dependencies might not be listed

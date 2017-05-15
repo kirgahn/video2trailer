@@ -30,7 +30,7 @@ args = parser.parse_args()
 #### run video2filstrip ####
 def video2filmstrip(sourcefile):
 	try:
-		os.system("video2filmstrip" + " \'" + sourcefile + "\'")
+		os.system("v2f" + " \'" + sourcefile + "\'")
 	except OSError as err:
                 input("Error: {0}".format(err) + " (Press ENTER to continue)")
 
