@@ -49,31 +49,39 @@ def check_path(path):
 
 #### convert seconds to hours (hh:mm:ss) ####
 def convert_to_minutes(seconds):
-	seconds=float(seconds)
-	sec = timedelta(seconds=seconds)
-	converted = datetime(1,1,1) + sec
-	#converted=converted.time()
-	converted=converted.strftime('%H:%M:%S.%f')[:-3]
-	return  converted
+	try:
+		seconds=float(seconds)
+		sec = timedelta(seconds=seconds)
+		converted = datetime(1,1,1) + sec
+		#converted=converted.time()
+		converted=converted.strftime('%H:%M:%S.%f')[:-3]
+		return  converted
+	except (ValueError) as err:
+		print("Error: {0}".format(err))
+		input("Unexpected error during conversion to minutes. (Press ENTER to continue)")
 
 #### convert hours (hh:mm:ss) to seconds ####
 def convert_to_seconds(stime):
 	#converted = sum(int(x) * 60 ** i for i,x in enumerate(reversed(time.split(":"))))
-	msecs_found=False
-	if stime.find(".") != -1: 
-	        (hours,msecs)=stime.split(".")
-	        msecs_found=True
-	else:
-	        hours=stime
+	try:
+		msecs_found=False
+		if stime.find(".") != -1: 
+		        (hours,msecs)=stime.split(".")
+		        msecs_found=True
+		else:
+		        hours=stime
+		
+		secs=str(sum(int(x) * 60 ** i for i,x in enumerate(reversed(hours.split(":")))))
+		
+		if msecs_found:
+		        secs=secs + "." + msecs
+		else:
+		        secs=secs + ".000"
 	
-	secs=str(sum(int(x) * 60 ** i for i,x in enumerate(reversed(hours.split(":")))))
-	
-	if msecs_found:
-	        secs=secs + "." + msecs
-	else:
-	        secs=secs + ".000"
-
-	return secs
+		return secs
+	except (ValueError) as err:
+		print("Error: {0}".format(err))
+		input("Unexpected error during conversion to seconds. (Press ENTER to continue)")
 
 #### retrieve terminal size ####
 def terminal_size():
@@ -83,7 +91,8 @@ def terminal_size():
 #### draw title on top of each menu ####
 def print_title():
 	## let's clear the screen at first
-	os.system('cls||clear')
+	#os.system('cls||clear')
+	os.system('clear')
 	(columns,rows)=terminal_size()
 	decorators=int((columns/2 - len(title)/2))
 	print(("=" * decorators) + title + ("=" * decorators))
@@ -134,7 +143,6 @@ def print_duration(slices):
 	print("Total video lenght: " + str(convert_to_minutes(total_duration)) )
 	
 def print_slices(slices,show_info,show_slice_lenght):
-
 	(columns,rows)=os.get_terminal_size()
 	if show_info:
 		menu_rows=23
