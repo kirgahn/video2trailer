@@ -14,6 +14,17 @@ then
 fi
 
 ############################################
+## If no input file has been specified    ##
+## just quit 				  ##
+############################################
+
+if [[ "$1" == "" ]];
+then
+	echo "No source file specified! Quitting..."
+	exit 1
+fi
+
+############################################
 ## initialize variables and get duration  ##
 ## time in secs. tell something about it  ##
 ############################################
