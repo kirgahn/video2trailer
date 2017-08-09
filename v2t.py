@@ -947,7 +947,7 @@ else:
 ## MAIN LOOP BEGINS HERE
 quit_loop=False
 show_info=True
-show_slice_lenght=False
+show_slice_lenght=True
 
 try:
 	while not quit_loop:
