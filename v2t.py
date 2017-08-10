@@ -203,8 +203,9 @@ def add_slice(slices,sourceduration):
 		else:
                 	input("Slices can't start/end after the end of the source video. (Press ENTER to continue)")
 
-	except ValueError as err:
-                print("Error: {0}".format(err))
+	#except ValueError as err:
+	except:
+                #print("Error: {0}".format(err))
                 input("Specified time values are incorrect. (Press ENTER to continue)")
 
 	return slices
