@@ -180,7 +180,7 @@ def print_slices(slices,show_info,show_slice_lenght):
 			if num < len(slices):
 				(ss,se)=slices[num]
 				if show_slice_lenght:
-					print_str=print_str + "#" + str(num) + ")" + str(convert_to_minutes(ss)) + "-" + str(convert_to_minutes(se)) + "-len: " + str(float(se)-float(ss)) + separator
+					print_str=print_str + "#" + str(num) + ")" + str(convert_to_minutes(ss)) + "-" + str(convert_to_minutes(se)) + "-len: " + str(round(float(se)-float(ss),2)) + separator
 				else:
 					print_str=print_str + "#" + str(num) + ")" + str(convert_to_minutes(ss)) + "-" + str(convert_to_minutes(se)) + separator
 				num=num+(available_rows)
