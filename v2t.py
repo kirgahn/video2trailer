@@ -467,7 +467,7 @@ def change_settings(destfile,fps,width,bitrate,threads,target_size,write_full_qu
 			#print("show info: " + str(show_info))
 			if show_info:
 				print_source_info(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourceheight,sourcefps)
-			print_separator()
+				print_separator()
 			print("")
 			print("1) (o)utput Filename (" + destfile + ")")
 			print("2) (f)ps (" + str(fps) + ")")
@@ -483,6 +483,7 @@ def change_settings(destfile,fps,width,bitrate,threads,target_size,write_full_qu
 			print_separator()
 	
 			#settings_choice=input("# ")
+			print("#",end="",flush=True)
 			settings_choice=getchar()
 	
 			if any(q in settings_choice for q in ["1","O","o"]):
@@ -726,6 +727,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 	
 	
 			#slices_choice=input("# ")
+			print("#",end="",flush=True)
 			slices_choice=getchar()
 	
 			if any(q in slices_choice for q in ["0","G","g"]):
@@ -767,7 +769,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 					slices = external_edit(slices,editor)
 				else:
 					#input("No defined slice! (Press ENTER to continue)")
-					input("No defined slice! (Press anykey to continue)")
+					print("No defined slice! (Press anykey to continue)")
 					getchar()
 			elif any(q in slices_choice for q in ["7","S","s"]):
 				if slices:
@@ -948,6 +950,7 @@ try:
 		print_separator()
 
 		#choice=input("# ")
+		print("#",end="",flush=True)
 		choice=getchar()
 		
 		if any(q in choice for q in ["1","O","o"]):
