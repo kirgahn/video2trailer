@@ -46,7 +46,6 @@ def video2filmstrip(sourcefile):
 	try:
 		os.system("v2f" + " \'" + sourcefile + "\'")
 	except OSError as err:
-                #input("Error: {0}".format(err) + " (Press ENTER to continue)")
 		print("Error: {0}".format(err) + " (Press any key to continue)")
 		getchar()
 
@@ -69,7 +68,6 @@ def convert_to_minutes(seconds):
 		seconds=float(seconds)
 		sec = timedelta(seconds=seconds)
 		converted = datetime(1,1,1) + sec
-		#converted=converted.time()
 		converted=converted.strftime('%H:%M:%S.%f')[:-3]
 		return  converted
 	except (ValueError) as err:
@@ -79,7 +77,6 @@ def convert_to_minutes(seconds):
 
 #### convert hours (hh:mm:ss) to seconds ####
 def convert_to_seconds(stime):
-	#converted = sum(int(x) * 60 ** i for i,x in enumerate(reversed(time.split(":"))))
 	try:
 		msecs_found=False
 		if stime.find(".") != -1: 
@@ -98,7 +95,6 @@ def convert_to_seconds(stime):
 		return secs
 	except (ValueError) as err:
 		print("Error: {0}".format(err))
-		#input("Unexpected error during conversion to seconds. (Press ENTER to continue)")
 		print("Unexpected error during conversion to seconds. (Press any key to continue)")
 		getchar()
 
@@ -151,7 +147,6 @@ def generate_slices(sourceduration):
 		return slices
 	except (OSError, ValueError) as err:
 		print("Error: {0}".format(err))
-		#input("Duration values can only be expressed in integers. (Press ENTER to continue)")
 		print("Duration values can only be expressed in integers. (Press any key to continue)")
 		getchar
 
@@ -222,14 +217,10 @@ def add_slice(slices,sourceduration):
 		if (float(ss) < sourceduration) and (float(se) < sourceduration):
 			slices.append([ss,se])
 		else:
-			#input("Slices can't start/end after the end of the source video. (Press ENTER to continue)")
 			print("Slices can't start/end after the end of the source video. (Press any key to continue)")
 			getchar()
 
-	#except ValueError as err:
 	except:
-		#print("Error: {0}".format(err))
-		#input("Specified time values are incorrect. (Press ENTER to continue)")
 		print("Specified time values are incorrect. (Press any key to continue)")
 		getchar()
 
@@ -251,17 +242,14 @@ def insert_slice(slices,sourceduration):
 			if (float(ss) < sourceduration) and (float(se) < sourceduration):
 				slices.insert(newpos,[ss,se])
 			else:
-				#input("Slices can't start/end after the end of the source video. (Press ENTER to continue)")
 				print("Slices can't start/end after the end of the source video. (Press any key to continue)")
 				getchar()
 		else:
-			#input("Invalid slice position selected. (Press ENTER to continue)")
 			print("Invalid slice position selected. (Press any key to continue)")
 			getchar()
 	
 	except ValueError as err:
 		print("Error: {0}".format(err))
-		#input("Either specified time values are incorrect or slice position is invalid. (Press ENTER to continue)")
 		print("Either specified time values are incorrect or slice position is invalid. (Press any key to continue)")
 		getchar()
 
@@ -282,17 +270,14 @@ def change_slice(slices,sourceduration):
 			if (float(ss) < sourceduration) or (float(se) < sourceduration):
 				slices[change_index]=(ss,se)
 			else:
-				#input("Slices can't start/end after the end of the source video. (Press ENTER to continue)")
 				print("Slices can't start/end after the end of the source video. (Press any key to continue)")
 				getchar()
 		else:
-			#input("Invalid slice position selected. (Press ENTER to continue)")
 			print("Invalid slice position selected. (Press any key to continue)")
 			getchar()
 
 	except ValueError as err:
 		print("Error: {0}".format(err))
-		#input("Either specified time values are incorrect or slice position is invalid. (Press ENTER to continue)")
 		print("Either specified time values are incorrect or slice position is invalid. (Press any key to continue)")
 		getchar()
 
@@ -305,13 +290,11 @@ def remove_slice(slices):
 		if not (change_index > len(slices)):
 			slices.pop(change_index)
 		else:
-			#input("Invalid slice position selected. (Press ENTER to continue)")
 			print("Invalid slice position selected. (Press any key to continue)")
 			getchar()
 
 	except ValueError as err:
 		print("Error: {0}".format(err))
-		#input("Slice position is invalid. (Press ENTER to continue)")
 		print("Slice position is invalid. (Press any key to continue)")
 		getchar()
 	return slices
@@ -357,7 +340,6 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
 		print("Time elapsed: " + elapsed_time)
 		
 	except (ValueError, OSError) as err:
-		#input("Error: {0}".format(err) + " (Press ENTER to continue)")
 		print("Error: {0}".format(err) + " (Press any key to continue)")
 		getchar()
 
@@ -390,10 +372,8 @@ def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheig
 
 			
 				subprocess.call(ffmpeg_command,shell=True)
-				#os.system(ffmpeg_command)
 			
 			except OSError as err:
-				#input("Error: {0}".format(err) + " (Press ENTER to continue)")
 				print("Error: {0}".format(err) + " (Press any key to continue)")
 				getchar()
 
@@ -402,7 +382,6 @@ def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheig
 			print("Time elapsed: " + elapsed_time)
 
 	except (ValueError, OSError) as err:
-		#input("Error: {0}".format(err) + " (Press ENTER to continue)")
 		print("Error: {0}".format(err) + " (Press any key to continue)")
 		getchar()
 
@@ -455,9 +434,6 @@ def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
 		elif confirm == "q" or confirm == "Q":
 			break
 
-#	except (ValueError, OSError) as err:
-#                input("Error: {0}".format(err) + " (Press ENTER to continue)")
-
 def change_settings(destfile,fps,width,bitrate,threads,target_size,write_full_quality,write_custom_quality,write_slices,show_info):
 	try:
 		settings_loop=False
@@ -506,22 +482,15 @@ def change_settings(destfile,fps,width,bitrate,threads,target_size,write_full_qu
 				new_threads = input("threads: ")
 				threads=new_threads
 			elif any(q in settings_choice for q in ["6","U","u"]):
-				#write_full_quality = input("full quality output: ")
 				write_full_quality = not bool(write_full_quality)
 			elif any(q in settings_choice for q in ["7","V","v"]):
-				#write_custom_quality = input("variable bitrate output: ")
 				write_custom_quality = not bool(write_custom_quality)
 			elif any(q in settings_choice for q in ["8","S","s"]):
-				#write_slices = input("write each slice as its own video: ")
 				write_slices = not bool(write_slices)
-			#elif any(q in settings_choice for q in ["9","C","c"]):
-			#	new_target_size = input("target size: ")
-			#	target_size=new_target_size
 			elif any(q in settings_choice for q in ["9","Q","q"]):
 				settings_loop=True
 		return (destfile,fps,width,bitrate,threads,target_size,write_full_quality,write_custom_quality,write_slices)
 	except (ValueError, OSError) as err:
-		#input("Error: {0}".format(err) + " (Press ENTER to continue)")
 		print("Error: {0}".format(err) + " (Press any key to continue)")
 		getchar()
 		
@@ -536,10 +505,6 @@ def load_state(state_file_name):
 			#### skip first two lines
 			state_file.readline().strip()
 			state_file.readline().strip()
-			#### the third line is to ignore the legacy "video" variable
-			#### it may be reused in the future
-			#state_file.readline().strip()
-			#video = VideoFileClip(state_file.readline().rstrip())
 			sourcefile = state_file.readline().rstrip()
 				
 			destfile = state_file.readline().rstrip()
@@ -568,19 +533,12 @@ def load_state(state_file_name):
 
 	except (ValueError, OSError) as err:
 		print("Can't parse state file!")
-		#input("Error: {0}".format(err) + " (Press ENTER to continue)")
 		print("Error: {0}".format(err) + " (Press any key to continue)")
 		getchar()
 
 #### Save State ####
 def save_state(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,write_slices):
 	line_number = 0
-	
-	#if sourcefile.find(".v2t")>0:
-	#	state_file_name=sourcefile
-	#	sourcefile=os.path.splitext(sourcefile)[0]
-	#else:
-	#	state_file_name=sourcefile + ".v2t"
 	state_file_name=destfile + ".v2t"
 
 	try:
@@ -610,13 +568,11 @@ def save_state(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,
 				state_file.write(str(ss)+"-"+str(se)+"\n")
 				line_number += 1
 
-			#input("State saved correctly (Press ENTER to continue)")
 			print("State saved correctly (Press any key to continue)")
 			getchar()
 
 	except (ValueError, OSError) as err:
 		print("Can't write state file!")
-		#input("Error: {0}".format(err) + " (Press ENTER to continue)")
 		print("Error: {0}".format(err) + " (Press any key to continue)")
 		getchar()
 
@@ -644,16 +600,10 @@ def external_edit(slices,editor):
 			        ss=convert_to_seconds(slice_line.split('-')[0])
 			        se=convert_to_seconds(slice_line.split('-')[1])
 			        slices.append([ss,se])
-			        #a_line += 1
-
-                #input("State saved correctly (Press ENTER to continue)")
-		#os.remove(tmpfile)
-		
 		return(slices)
 
 	except (ValueError, OSError) as err:
 		print("Can't write state file!")
-		#input("Error: {0}".format(err) + " (Press ENTER to continue)")
 		print("Error: {0}".format(err) + " (Press any key to continue)")
 		getchar()
 
@@ -664,7 +614,7 @@ def parse_ffprobe_info(sourcefile):
 	j = json.loads(stream_info)
 	
 	#### ['streams'] is an array that includes audio and video streams
-	#### therefre we look for the position of the first video stream
+	#### therefore we look for the position of the first video stream
 	for i  in range(len(j['streams'])):
 	        codec_type=j['streams'][i]['codec_type']
 	        if codec_type=='video':
@@ -726,7 +676,6 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 				print_slices(slices,show_info,show_slice_lenght)
 	
 	
-			#slices_choice=input("# ")
 			print("#",end="",flush=True)
 			slices_choice=getchar()
 	
@@ -743,32 +692,27 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 				if slices:
 					slices = change_slice(slices,sourceduration)
 				else:
-					#input("No defined slice! (Press ENTER to continue)")
 					print("No defined slice! (Press any key to continue)")
 					getchar()
 			elif any(q in slices_choice for q in ["4","R","r"]):
 				if slices:
 					slices = remove_slice(slices)
 				else:
-					#input("No defined slice! (Press ENTER to continue)")
 					print("No defined slice! (Press any key to continue)")
 					getchar()
 			elif any(q in slices_choice for q in ["5","D","d"]):
 				if slices:
-					#sure = input("Confirm operation (y/n)")
 					print("Confirm operation (y/n)")
 					sure = getchar()
 					if sure == "y" or sure == "Y" or sure == "":
 						slices = []
 				else:
-					#input("No defined slice! (Press ENTER to continue)")
 					print("No defined slice! (Press any key to continue)")
 					getchar()
 			elif any(q in slices_choice for q in ["6","E","e"]):
 				if slices:
 					slices = external_edit(slices,editor)
 				else:
-					#input("No defined slice! (Press ENTER to continue)")
 					print("No defined slice! (Press anykey to continue)")
 					getchar()
 			elif any(q in slices_choice for q in ["7","S","s"]):
@@ -782,11 +726,9 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 
 						write_preview(sourcefile,subslice,tempfile,20,180,320,"0.2M",threads)
 					except (ValueError, OSError) as err:
-						#input("Error: {0}".format(err) + " (Press ENTER to continue)")
 						print("Error: {0}".format(err) + " (Press any key to continue)")
 						getchar()
 				else:
-					#input("No defined slice! (Press ENTER to continue)")
 					print("No defined slice! (Press any key to continue)")
 					getchar()
 			elif any(q in slices_choice for q in ["8","P","p"]):
@@ -798,11 +740,9 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 						tempfile=path+destfile+str(random.randint(0,1024))+ext
 						write_preview(sourcefile,slices,tempfile,20,180,320,"0.2M",threads)
 					except (ValueError, OSError) as err:
-						#input("Error: {0}".format(err) + " (Press ENTER to continue)")
 						print("Error: {0}".format(err) + " (Press any key to continue)")
 						getchar()
 				else:
-					#input("No defined slice! (Press ENTER to continue)")
 					print("No defined slice! (Press any key to continue)")
 					getchar()
 
@@ -812,8 +752,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 					#### write the full quality webm
 					#### targetfile is destfile less the file extension (first thing after "." starting from 
 					#### the right plus resolution and extension: "_WIDTHxHEIGHT.webm"
-					if int(write_full_quality) > 0:
-
+					if write_full_quality:
 						path="./full/"
 						check_path(path)
 						targetfile=path+destfile.rsplit( "." ,1 )[0]+"_"+str(sourcewidth)+"x"+str(sourceheight)+ext
@@ -821,31 +760,25 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 						ffmpeg_write_vo(sourcefile,slices,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads)
 
 					#### write the custom quality version
-					#if int(target_size) > 0:
-					if int(write_custom_quality) > 0:
+					if write_custom_quality:
 						path="./variable/"
 						check_path(path)
 						#### find correct height value given the priginl aspect ratio
-						#height=calculate_height(int(width),int(sourcewidth),int(sourceheight))
 						height=calculate_height(width,sourcewidth,sourceheight)
-						#file_to_compress=targetfile
 						targetfile=path+destfile.rsplit( "." ,1 )[0]+"_"+str(width)+"x"+str(height)+".vbr"+str(bitrate)+"."+str(fps)+"fps"+ext
 						#print("encoding with choosen quality output: " +targetfile)
 						ffmpeg_write_vo(sourcefile,slices,targetfile,fps,width,height,bitrate,threads)
-						#compress(file_to_compress,targetfile,bitrate,fps,width,threads)
 
 					#### write each slice as it's own webm
-					if int(write_slices) > 0:
+					if write_slices:
 						path="./slices/"
 						check_path(path)
 						targetfile=path+destfile.rsplit( "." ,1 )[0]
 						write_all_slices(sourcefile,slices,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate)
 
-					#input("Encoding completed (Press ENTER to continue)")
 					print("Encoding completed (Press any key to continue)")
 					getchar()
 				else:
-					#input("No defined slice! (Press ENTER to continue)")
 					print("No defined slice! (Press any key to continue)")
 					getchar()
 			elif any(q in slices_choice for q in ["10","T","t"]):
@@ -854,7 +787,6 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 				slices_loop=True
 		return slices
 	except (ValueError, OSError) as err:
-		#input("Error: {0}".format(err) + " (Press ENTER to continue)")
 		print("Error: {0}".format(err) + " (Press any key to continue)")
 		getchar()
 
@@ -867,9 +799,9 @@ title = "|| video2trailer ||"
 player="mplayer -loop 0 -osd-fractions 1"
 editor="vim"
 
-write_full_quality=0
-write_custom_quality=1
-write_slices=0
+write_full_quality=True
+write_custom_quality=True
+write_slices=False
 
 sourcefile = args.sourcefile
 
@@ -879,8 +811,6 @@ if not os.path.isfile(sourcefile):
 if sourcefile.lower().endswith(('.v2t')):
 	state_file_name=sourcefile
 	(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,write_slices) = load_state(state_file_name)
-	#sourcefile=os.path.splitext(sourcefile)[0]
-	
 	(sourcewidth,sourceheight,sourcefps,sourcebitrate,sourceduration)=parse_ffprobe_info(sourcefile)
 
 else:
@@ -931,13 +861,11 @@ show_slice_lenght=True
 
 try:
 	while not quit_loop:
-	
 		## Main Menu
 		print_title()
 		if show_info:
 			print_source_info(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourceheight,sourcefps)
 			print_separator()
-
 		print("")
 		print("1) (o)pen with default media player")
 		print("2) (f)ilmstrip")
@@ -949,7 +877,6 @@ try:
 		print("")
 		print_separator()
 
-		#choice=input("# ")
 		print("#",end="",flush=True)
 		choice=getchar()
 		
@@ -973,6 +900,5 @@ except KeyboardInterrupt:
 			os.system('cls||clear')
 			sys.exit()
 except (ValueError, OSError) as err:
-	#input("Error: {0}".format(err) + " (Press ENTER to continue)")
 	print("Error: {0}".format(err) + " (Press any key to continue)")
 	getchar()
