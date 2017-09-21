@@ -26,9 +26,50 @@ args = parser.parse_args()
 	
 #### Functions #####
 
+def validate_string(test_str):
+        allowed_chars="0123456789.:"
+        return all(i in allowed_chars for i in test_str)
+
+def time_input():
+	#let's define some unicodes
+	carriage_return='\x0d'
+	backspace='\x7f'
+	erase_line='\x1b[2K'
+	cursor_up = '\x1b[1A'
+
+	char_buffer=""
+	while len(char_buffer)<9:
+		try:
+			char=getchar()
+			if not char==carriage_return:
+				if not char==backspace:
+					if validate_string(char):
+						if len(char_buffer)==2:
+							char_buffer=char_buffer+":"
+							print(":",end="",flush=True)
+						if len(char_buffer)==5:
+							char_buffer=char_buffer+"."
+							print(".",end="",flush=True)
+						char_buffer=char_buffer+char
+						print(char,end="",flush=True)
+				else:
+	                                if len(char_buffer)>=0:
+	                                        char_buffer=char_buffer[:-1]
+	                                        print(erase_line + cursor_up,flush=True)
+	                                        print(char_buffer,end="",flush=True)
+			else:
+				print("\n")
+				if char_buffer[-1:]=="." or char_buffer[-1:]==":":
+					char_buffer=char_buffer[:-1]
+				return(char_buffer)
+		except (ValueError, OSError) as err:
+			logger("Error: {0}".format(err))
+			print("Error: {0}".format(err) + " (Press any key to continue)")
+	print("\n")
+	return(char_buffer)
+
 def logger(logmessage):
 	logfile="./v2t.log"
-	#now=datetime.datetime.now()
 	now=datetime.now()
 	now=now.strftime('%Y-%M-%d-%H:%M:%S.%f')[:-3]
 
@@ -229,11 +270,11 @@ def print_slices(slices,show_info,show_slice_lenght):
 		
 def add_slice(slices,sourceduration):
 	try:
-		print("Please insert start time for the new subclip (hh:mm:ss.msc)")
-		ss=convert_to_seconds(input("#"))
+		print("Please insert start time for the new subclip (hh:mm:ss.msc)",flush=True)
+		ss=convert_to_seconds(time_input())
 
-		print("Please insert end time for the new subclip (hh:mm:ss.msc)")
-		se=convert_to_seconds(input("#"))
+		print("Please insert end time for the new subclip (hh:mm:ss.msc)",flush=True)
+		se=convert_to_seconds(time_input())
 
 		if (float(ss) < sourceduration) and (float(se) < sourceduration):
 			slices.append([ss,se])
@@ -254,10 +295,10 @@ def insert_slice(slices,sourceduration):
 	
 		if not (newpos > len(slices)):
 			print("Please insert start time for the new subclip (hh:mm:ss.msc)")
-			ss=convert_to_seconds(input("#"))
+			ss=convert_to_seconds(time_input())
 	
 			print("Please insert end time for the new subclip (hh:mm:ss.msc)")
-			se=convert_to_seconds(input("#"))
+			se=convert_to_seconds(time_input())
 	
 			if (float(ss) < sourceduration) and (float(se) < sourceduration):
 				slices.insert(newpos,[ss,se])
@@ -282,10 +323,10 @@ def change_slice(slices,sourceduration):
 		if not (change_index > len(slices)):
 
 			print("Please insert start time for the new subclip (hh:mm:ss.msc)")
-			ss=convert_to_seconds(input("#"))
+			ss=convert_to_seconds(time_input())
 	
 			print("Please insert end time for the new subclip (hh:mm:ss.msc)")
-			se=convert_to_seconds(input("#"))
+			se=convert_to_seconds(time_input())
 	
 			if (float(ss) < sourceduration) or (float(se) < sourceduration):
 				slices[change_index]=(ss,se)
@@ -614,7 +655,7 @@ def external_edit(slices,editor):
 								i += 1
 
 		logger("Editing slices with external editor using command: " + editor + " " + tmpfile)
-		subprocess.call(editor + " " + tmpfile,shell=True)	
+		subprocess.call(editor + " " + "\"" + tmpfile + "\"",shell=True)	
 
 		slices=[]
 		with open(tmpfile, encoding='utf-8') as state_file:
