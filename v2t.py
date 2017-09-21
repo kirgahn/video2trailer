@@ -26,26 +26,43 @@ args = parser.parse_args()
 	
 #### Functions #####
 
+def logger(logmessage):
+	logfile="./v2t.log"
+	#now=datetime.datetime.now()
+	now=datetime.now()
+	now=now.strftime('%Y-%M-%d-%H:%M:%S.%f')[:-3]
+
+	try:
+		with open(logfile,mode='a', encoding='utf-8') as log_file:
+			log_file.write("[" + now + "] - " + logmessage+"\n")
+		log_file.close()
+	except (ValueError, OSError) as err:
+		print("Can't write log file!")
+		print("Error: {0}".format(err) + " (Press any key to continue)")
+		getchar()
+
 #### define getchar to get only a single char as input without waiting for a newline
 def getchar():
-    import termios
-    import sys, tty
-    def _getch():
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        try:
-            tty.setraw(fd)
-            ch = sys.stdin.read(1)
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-        return ch
-    return _getch()
+	import termios
+	import sys, tty
+	def _getch():
+		fd = sys.stdin.fileno()
+		old_settings = termios.tcgetattr(fd)
+		try:
+			tty.setraw(fd)
+			ch = sys.stdin.read(1)
+		finally:
+			termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+		return ch
+	return _getch()
 
 #### run video2filstrip ####
 def video2filmstrip(sourcefile):
 	try:
+		logger("Running video2filmstrip")
 		os.system("v2f" + " \'" + sourcefile + "\'")
 	except OSError as err:
+		logger("Error: {0}".format(err))
 		print("Error: {0}".format(err) + " (Press any key to continue)")
 		getchar()
 
@@ -53,14 +70,17 @@ def video2filmstrip(sourcefile):
 def xdg_open(sourcefile):
 	if sourcefile:
 		try:
+			logger("Playing media file with command: "+ player + " \'" + sourcefile + "\' &> /dev/null &")
 			os.system(player + " \'" + sourcefile + "\' &> /dev/null &")
 		except OSError as err:
+			logger("Error: {0}".format(err))
 			print("OS error: {0}".format(err))
 
 #### create directory if not found
 def check_path(path):
 	if not os.path.exists(path):
-	    os.makedirs(path)
+		logger("Creating path: "+ path)
+		os.makedirs(path)
 
 #### convert seconds to hours (hh:mm:ss) ####
 def convert_to_minutes(seconds):
@@ -71,6 +91,7 @@ def convert_to_minutes(seconds):
 		converted=converted.strftime('%H:%M:%S.%f')[:-3]
 		return  converted
 	except (ValueError) as err:
+		logger("Unexpected error during conversion to minutes - Error: {0}".format(err))
 		print("Error: {0}".format(err))
 		print("Unexpected error during conversion to minutes. (Press any key to continue)")
 		getchar()
@@ -80,20 +101,19 @@ def convert_to_seconds(stime):
 	try:
 		msecs_found=False
 		if stime.find(".") != -1: 
-		        (hours,msecs)=stime.split(".")
-		        msecs_found=True
+			(hours,msecs)=stime.split(".")
+			msecs_found=True
 		else:
-		        hours=stime
-		
+			hours=stime
 		secs=str(sum(int(x) * 60 ** i for i,x in enumerate(reversed(hours.split(":")))))
 		
 		if msecs_found:
-		        secs=secs + "." + msecs
+				secs=secs + "." + msecs
 		else:
-		        secs=secs + ".000"
-	
+				secs=secs + ".000"
 		return secs
 	except (ValueError) as err:
+		logger("Unexpected error during conversion to seconds. - Error: {0}".format(err))
 		print("Error: {0}".format(err))
 		print("Unexpected error during conversion to seconds. (Press any key to continue)")
 		getchar()
@@ -106,7 +126,6 @@ def terminal_size():
 #### draw title on top of each menu ####
 def print_title():
 	## let's clear the screen at first
-	#os.system('cls||clear')
 	os.system('clear')
 	(columns,rows)=terminal_size()
 	decorators=int((columns/2 - len(title)/2))
@@ -125,13 +144,14 @@ def print_separator():
 #### generate random slices ####
 def generate_slices(sourceduration):
 	slices = []
-
 	try:
 		print("Please select the overall duration for the clip in seconds")
 		duration=int(input("# "))
 	
 		print("Please select the duration for each slice in seconds")
 		sliceduration=int(input("# "))
+
+		logger("Generating slices with overall clip duration of " + str(duration) + " secs and slice duration of " + str(sliceduration)+ " secs" )
 	
 		prevpos = 0
 		cycles = duration/sliceduration
@@ -144,8 +164,10 @@ def generate_slices(sourceduration):
 			prevpos = s
 			slices.append([s,s+sliceduration])
 			n = n + 1
+		logger("Generated " + str(len(slices)) + " slices")
 		return slices
 	except (OSError, ValueError) as err:
+		logger("Error: {0}".format(err))
 		print("Error: {0}".format(err))
 		print("Duration values can only be expressed in integers. (Press any key to continue)")
 		getchar
@@ -168,7 +190,6 @@ def print_slices(slices,show_info,show_slice_lenght):
 	available_rows=int(rows)-menu_rows
 	slice_columns=math.ceil(len(slices)/available_rows)
 	slices_per_column=math.ceil(len(slices)/slice_columns)
-	#separator=" "*5
 
 	print("Selected slices:")
 	print("")
@@ -219,7 +240,6 @@ def add_slice(slices,sourceduration):
 		else:
 			print("Slices can't start/end after the end of the source video. (Press any key to continue)")
 			getchar()
-
 	except:
 		print("Specified time values are incorrect. (Press any key to continue)")
 		getchar()
@@ -249,10 +269,10 @@ def insert_slice(slices,sourceduration):
 			getchar()
 	
 	except ValueError as err:
+		logger("Error: {0}".format(err))
 		print("Error: {0}".format(err))
 		print("Either specified time values are incorrect or slice position is invalid. (Press any key to continue)")
 		getchar()
-
 	return slices
 
 def change_slice(slices,sourceduration):
@@ -277,10 +297,10 @@ def change_slice(slices,sourceduration):
 			getchar()
 
 	except ValueError as err:
+		logger("Error: {0}".format(err))
 		print("Error: {0}".format(err))
 		print("Either specified time values are incorrect or slice position is invalid. (Press any key to continue)")
 		getchar()
-
 	return slices
 
 def remove_slice(slices):
@@ -294,6 +314,7 @@ def remove_slice(slices):
 			getchar()
 
 	except ValueError as err:
+		logger("Error: {0}".format(err))
 		print("Error: {0}".format(err))
 		print("Slice position is invalid. (Press any key to continue)")
 		getchar()
@@ -321,25 +342,24 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
 		ffmpeg_command_pass1=ffmpeg_command + " -an -pass 1 -map \"[out]\" -f webm " + "/dev/null"
 		ffmpeg_command_pass2=ffmpeg_command + " -pass 2 -map \"[out]\" " + "-f webm \'" + destfile + "\'"
 
-		#### DEBUG
-		#print("#"*30)
-		#print("### 1:\'" + ffmpeg_command_pass1 + "\'")
-		#print("")
-		#print("### 2:\'" + ffmpeg_command_pass2 + "\'")
-		#print("#"*30)
-
+		logger("Enconding to: " + destfile)
 		print("Enconding to: " + destfile)
 		start_time=time.time()
 
+		logger("Encoding to " + destfile + ", running first pass with command: " + ffmpeg_command_pass1)
 		os.system(ffmpeg_command_pass1)
+
+		logger("Encoding to " + destfile + ", running second pass with command: " + ffmpeg_command_pass2)
 		os.system(ffmpeg_command_pass2)
 		os.remove("ffmpeg2pass-0.log")
 
 		end_time=time.time()
 		elapsed_time=convert_to_minutes(end_time-start_time)
+		logger("Encoding done, elapsed time with " + str(threads) + " threads is: " + elapsed_time)
 		print("Time elapsed: " + elapsed_time)
 		
 	except (ValueError, OSError) as err:
+		logger("Error: {0}".format(err))
 		print("Error: {0}".format(err) + " (Press any key to continue)")
 		getchar()
 
@@ -347,13 +367,13 @@ def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheig
 	try:
 		#### encoder = either libx264 or libvpx
 		encoder="libvpx"
-
 		start_time=time.time()
 
 		vo_slices = []
+		logger("Encoding " + str(len(slices)) + " slices, each slice as a separate ouput file")
 		for i in range(len(slices)):
 			outfile="\'" + destfile + "_" + str(i) + ".webm\'"
-			print("encoding slice #" + str(i) + " with filename: " + outfile)
+
 			(ss,se)=slices[i]
 
 			#### with libvpx options
@@ -365,23 +385,24 @@ def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheig
 		
 			ffmpeg_command=ffmpeg_command + "concat=n=1:v=1:a=1[out]\" "
 			ffmpeg_command=ffmpeg_command + "-map \"[out]\" " + outfile
-			#print("#### ffmpeg_command: " + "\"" + ffmpeg_command + "\"")
 	
 			try:
-				print("Enconding to: " + destfile)
-
-			
+				logger("Encoding slice #" + str(i) + " with filename " + outfile + ", using ffmpeg command: " + ffmpeg_command)
+				print("encoding slice #" + str(i) + " with filename: " + outfile)
 				subprocess.call(ffmpeg_command,shell=True)
 			
 			except OSError as err:
+				logger("Error: {0}".format(err))
 				print("Error: {0}".format(err) + " (Press any key to continue)")
 				getchar()
 
 			end_time=time.time()
 			elapsed_time=convert_to_minutes(end_time-start_time)
-			print("Time elapsed: " + elapsed_time)
+			logger("Encoding done, elapsed time with " + str(threads) + " threads is: " + elapsed_time)
+			print("Elapsed time: " + elapsed_time)
 
 	except (ValueError, OSError) as err:
+		logger("Error: {0}".format(err))
 		print("Error: {0}".format(err) + " (Press any key to continue)")
 		getchar()
 
@@ -395,7 +416,6 @@ def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
 	#try:
 	vo_slices = []
 
-	print("Encoding preview file: \"" + destfile + "\"")
 	ffmpeg_command="ffmpeg -stats -v quiet -i \'" + sourcefile + "\' -y -codec:v " + encoder + " -b:v " + str(bitrate) + " -s " + str(width) + "x" + str(height) + opts + " -c:a libvorbis -q 0 -filter_complex \""
 	for i in range(len(slices)):
 		(ss,se)=slices[i]
@@ -409,26 +429,23 @@ def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
 	ffmpeg_command=ffmpeg_command + "concat=n=" + str(len(slices)) + ":v=1:a=1[out]\" "
 	ffmpeg_command=ffmpeg_command + "-map \"[out]\" " + "\'" + destfile + "\'"
 
-	print("Enconding to: " + destfile)
 	start_time=time.time()
+
+	logger("Encoding preview file \"" + destfile + "\"" + " with ffmpeg command: " + ffmpeg_command)
+	print("Encoding preview file: \"" + destfile + "\"")
 
 	subprocess.call(ffmpeg_command,shell=True)
 
 	end_time=time.time()
 	elapsed_time=convert_to_minutes(end_time-start_time)
+	logger("Encoding preview file done, elapsed time with " + str(threads) + " threads is: " + elapsed_time)
 	print("Time elapsed: " + elapsed_time)
-
-
-	### DEBUG 
-	#print(ffmpeg_command)
 
 	print("(p) to watch the preview file, (r) to remove the preview file, (q) to resume editing ")
 	while True:
-		#confirm=input("")
 		confirm=getchar()
-		if confirm == "p" or confirm == "P": # or confirm == "":
+		if confirm == "p" or confirm == "P":
 			xdg_open(destfile)
-			#input("press enter to resume editing")
 		elif confirm == "r" or confirm == "R":
 			os.system("rm " +  destfile)
 		elif confirm == "q" or confirm == "Q":
@@ -453,12 +470,10 @@ def change_settings(destfile,fps,width,bitrate,threads,target_size,write_full_qu
 			print("6) f(u)ll quality video output (" + str(write_full_quality) + ")")
 			print("7) (v)ariable bitrate video output (" + str(write_custom_quality) + ")")
 			print("8) (s)lices output (" + str(write_slices) + ")")
-			#print("9) (c)onstant bitrate output target size (0 means do not encode, any int >0 is the target size in MB) (" + str(target_size) + ")")
 			print("9) (q)uit to main menu")
 			print("")
 			print_separator()
 	
-			#settings_choice=input("# ")
 			print("#",end="",flush=True)
 			settings_choice=getchar()
 	
@@ -491,6 +506,7 @@ def change_settings(destfile,fps,width,bitrate,threads,target_size,write_full_qu
 				settings_loop=True
 		return (destfile,fps,width,bitrate,threads,target_size,write_full_quality,write_custom_quality,write_slices)
 	except (ValueError, OSError) as err:
+		logger("Error: {0}".format(err))
 		print("Error: {0}".format(err) + " (Press any key to continue)")
 		getchar()
 		
@@ -499,6 +515,7 @@ def change_settings(destfile,fps,width,bitrate,threads,target_size,write_full_qu
 def load_state(state_file_name):
 	line_number = 0
 	slices = []
+	logger("Loading state file: " + state_file_name)
 
 	try:
 		with open(state_file_name, encoding='utf-8') as state_file:
@@ -529,9 +546,12 @@ def load_state(state_file_name):
 				se=convert_to_seconds(slice_line.split('-')[1])
 				slices.append([ss,se])
 
+		logger("Loading state file succeeded")
 		return (sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,write_slices)
 
+
 	except (ValueError, OSError) as err:
+		logger("Can't parse state file - " + "Error: {0}".format(err))
 		print("Can't parse state file!")
 		print("Error: {0}".format(err) + " (Press any key to continue)")
 		getchar()
@@ -540,6 +560,7 @@ def load_state(state_file_name):
 def save_state(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,write_slices):
 	line_number = 0
 	state_file_name=destfile + ".v2t"
+	logger("Saving state file " + state_file_name)
 
 	try:
 		with open(state_file_name,mode='w', encoding='utf-8') as state_file:
@@ -568,10 +589,12 @@ def save_state(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,
 				state_file.write(str(ss)+"-"+str(se)+"\n")
 				line_number += 1
 
+			logger("Saving state file succeeded")
 			print("State saved correctly (Press any key to continue)")
 			getchar()
 
 	except (ValueError, OSError) as err:
+		logger("Can't write state file - " + "Error: {0}".format(err))
 		print("Can't write state file!")
 		print("Error: {0}".format(err) + " (Press any key to continue)")
 		getchar()
@@ -583,42 +606,47 @@ def external_edit(slices,editor):
 	tmpfile=state_path + destfile+str(random.randint(0,1024))+".edit.v2t"
 	try:
 		with open(tmpfile,mode='w', encoding='utf-8') as state_file:
-                        for i in range(len(slices)):
-                                (ss,se)=slices[i]
-                                ss=convert_to_minutes(ss)
-                                se=convert_to_minutes(se)
-                                state_file.write(str(i) + ")" +  str(ss)+"-"+str(se)+"\n")
-                                i += 1
+						for i in range(len(slices)):
+								(ss,se)=slices[i]
+								ss=convert_to_minutes(ss)
+								se=convert_to_minutes(se)
+								state_file.write(str(i) + ")" +  str(ss)+"-"+str(se)+"\n")
+								i += 1
 
+		logger("Editing slices with external editor using command: " + editor + " " + tmpfile)
 		subprocess.call(editor + " " + tmpfile,shell=True)	
 
 		slices=[]
 		with open(tmpfile, encoding='utf-8') as state_file:
 			for a_line in state_file:
-			        slice_line=a_line.rstrip()
-			        slice_line=slice_line.split(")")[1]
-			        ss=convert_to_seconds(slice_line.split('-')[0])
-			        se=convert_to_seconds(slice_line.split('-')[1])
-			        slices.append([ss,se])
+					slice_line=a_line.rstrip()
+					slice_line=slice_line.split(")")[1]
+					ss=convert_to_seconds(slice_line.split('-')[0])
+					se=convert_to_seconds(slice_line.split('-')[1])
+					slices.append([ss,se])
+		logger("Reloading slices edited with external editor succedeed")
 		return(slices)
 
 	except (ValueError, OSError) as err:
-		print("Can't write state file!")
+		logger("Can't write temporary state file - " + "Error: {0}".format(err))
+		print("Can't write temporary state file!")
 		print("Error: {0}".format(err) + " (Press any key to continue)")
 		getchar()
 
 def parse_ffprobe_info(sourcefile):
 	#### Ask ffmpeg to provide a json with info about the video that we're going to parse
 	command='ffprobe -v quiet -print_format json -show_format -show_streams \"' + sourcefile + "\""
+	logger("Parsing video info with command: " + command)
 	stream_info = subprocess.getoutput(command)
 	j = json.loads(stream_info)
+	logger("Dumping media info json file: " + str(j))
 	
 	#### ['streams'] is an array that includes audio and video streams
 	#### therefore we look for the position of the first video stream
 	for i  in range(len(j['streams'])):
-	        codec_type=j['streams'][i]['codec_type']
-	        if codec_type=='video':
-	                video_stream_pos=i
+			codec_type=j['streams'][i]['codec_type']
+			if codec_type=='video':
+					video_stream_pos=i
 	
 	sourcewidth=j['streams'][video_stream_pos]['width']
 	sourceheight=j['streams'][video_stream_pos]['height']
@@ -626,6 +654,12 @@ def parse_ffprobe_info(sourcefile):
 	sourcebitrate=int(j['format']['bit_rate'])/1000
 	sourceduration=math.floor(float(j['format']['duration']))
 	
+	logger("Parsed info:")
+	logger("Resolution is: " + str(sourcewidth) + "x" + str(sourceheight))
+	logger("FPS is: " + str(sourcefps))
+	logger("Bitrate is: " + str(sourcebitrate))
+	logger("Source durations is: " + str(sourceduration))
+
 	#### DEBUG :: UnicodeDecodeError: 'ascii' codec can't decode byte 0xe2 in position 3714: ordinal not in range(128)
 	#print(sourcewidth)
 	#print(sourceheight)
@@ -674,7 +708,6 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 			if slices:
 				print_duration(slices)
 				print_slices(slices,show_info,show_slice_lenght)
-	
 	
 			print("#",end="",flush=True)
 			slices_choice=getchar()
@@ -726,6 +759,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 
 						write_preview(sourcefile,subslice,tempfile,20,180,320,"0.2M",threads)
 					except (ValueError, OSError) as err:
+						logger("Error: {0}".format(err))
 						print("Error: {0}".format(err) + " (Press any key to continue)")
 						getchar()
 				else:
@@ -740,6 +774,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 						tempfile=path+destfile+str(random.randint(0,1024))+ext
 						write_preview(sourcefile,slices,tempfile,20,180,320,"0.2M",threads)
 					except (ValueError, OSError) as err:
+						logger("Error: {0}".format(err))
 						print("Error: {0}".format(err) + " (Press any key to continue)")
 						getchar()
 				else:
@@ -787,6 +822,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 				slices_loop=True
 		return slices
 	except (ValueError, OSError) as err:
+		logger("Error: {0}".format(err))
 		print("Error: {0}".format(err) + " (Press any key to continue)")
 		getchar()
 
@@ -805,7 +841,10 @@ write_slices=False
 
 sourcefile = args.sourcefile
 
+logger("Starting video2trailer, sourcefile is: " + sourcefile)
+
 if not os.path.isfile(sourcefile):
+	logger("Can't open file \"" + sourcefile + "\" for reading! Quitting now.")
 	raise SystemExit("Can't open file \"" + sourcefile + "\" for reading! Quitting now." )
 
 if sourcefile.lower().endswith(('.v2t')):
@@ -815,50 +854,45 @@ if sourcefile.lower().endswith(('.v2t')):
 
 else:
 	state_file_name=sourcefile + ".v2t"
-
 	(sourcewidth,sourceheight,sourcefps,sourcebitrate,sourceduration)=parse_ffprobe_info(sourcefile)
 
 	try:
 		with open(state_file_name,encoding='utf-8'):
 			(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,write_slices) = load_state(state_file_name)
 	except (ValueError, OSError):
+		logger("No state file found, using default values")
 
 		slices = []
-
 		## Set default values whereas no argument was given
 		if not args.destfile:
-		        destfile=str(args.sourcefile)+'_trailer.webm'
+			destfile=str(args.sourcefile)+'_trailer.webm'
 		else:
-		        destfile=args.destfile
+			destfile=args.destfile
 		if not args.fps:
-		        fps=sourcefps
+			fps=sourcefps
 		else:
-		        fps=args.fps
+			fps=args.fps
 		if not args.width:
 			width=sourcewidth
 		else:
-		        width=args.width
+			width=args.width
 		if not args.bitrate:
 			bitrate="400"
 		else:
-		        bitrate=sourcebitrate
-		
+			bitrate=sourcebitrate
 		if not args.threads:
 			threads=3
 		else:
 			threads=args.threads
-
 		if not args.targetsize:
 			target_size=0
 		else:
 			target_size=args.targetsize
 
-
 ## MAIN LOOP BEGINS HERE
 quit_loop=False
 show_info=True
 show_slice_lenght=True
-
 try:
 	while not quit_loop:
 		## Main Menu
@@ -895,10 +929,13 @@ try:
 			save_state(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,write_slices)
 		elif any(q in choice for q in ["6","Q","q"]):
 			os.system('cls||clear')
+			logger("Quitting video2trailer")
 			quit_loop=True
 except KeyboardInterrupt:
 			os.system('cls||clear')
+			logger("Quitting video2trailer")
 			sys.exit()
 except (ValueError, OSError) as err:
+	logger("Error: {0}".format(err) )
 	print("Error: {0}".format(err) + " (Press any key to continue)")
 	getchar()
