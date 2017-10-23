@@ -8,5 +8,6 @@ dependecies(***):
 * imagemagik
 * mplayer
 * feh
+* youtube-dl
 
 *** some dependencies might not be listed
