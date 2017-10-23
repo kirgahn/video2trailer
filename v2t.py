@@ -674,6 +674,14 @@ def external_edit(slices,editor):
 		print("Error: {0}".format(err) + " (Press any key to continue)")
 		getchar()
 
+def youtube_dl_get_url(sourcefile):
+	command='youtube-dl -q --no-warnings -f best -g \'' + sourcefile + '\''
+	logger("Extracting video URL info with command: " + command)
+	sourcefile = subprocess.getoutput(command)
+	logger("Extracted video URL is: " + sourcefile)
+
+	return(sourcefile)
+
 def parse_ffprobe_info(sourcefile):
 	#### Ask ffmpeg to provide a json with info about the video that we're going to parse
 	command='ffprobe -v quiet -print_format json -show_format -show_streams \"' + sourcefile + "\""
@@ -884,7 +892,7 @@ sourcefile = args.sourcefile
 
 logger("Starting video2trailer, sourcefile is: " + sourcefile)
 
-if not os.path.isfile(sourcefile):
+if not sourcefile[:4]=="http" and not os.path.isfile(sourcefile):
 	logger("Can't open file \"" + sourcefile + "\" for reading! Quitting now.")
 	raise SystemExit("Can't open file \"" + sourcefile + "\" for reading! Quitting now." )
 
@@ -892,8 +900,10 @@ if sourcefile.lower().endswith(('.v2t')):
 	state_file_name=sourcefile
 	(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,write_slices) = load_state(state_file_name)
 	(sourcewidth,sourceheight,sourcefps,sourcebitrate,sourceduration)=parse_ffprobe_info(sourcefile)
-
 else:
+	if sourcefile[:4]=="http":
+		sourcefile=youtube_dl_get_url(sourcefile)
+
 	state_file_name=sourcefile + ".v2t"
 	(sourcewidth,sourceheight,sourcefps,sourcebitrate,sourceduration)=parse_ffprobe_info(sourcefile)
 
