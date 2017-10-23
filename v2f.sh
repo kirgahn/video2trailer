@@ -106,7 +106,7 @@ done;
 ## Offer to show results.                     ##
 ################################################
 
-montage  -tile 6 -geometry +0+0 $framelist '$1'.jpeg
+montage  -tile 6 -geometry +0+0 $framelist "$1".jpeg
 
 	if [ "$quiet" != "true"  ];
 	then
