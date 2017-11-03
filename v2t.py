@@ -881,7 +881,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 title = "|| video2trailer ||"
 #player="xdg-open"
 #player="vlc"
-player="mplayer -loop 0 -osd-fractions 1"
+player="mplayer -loop 0 -osd-fractions 1 -osdlevel 3"
 editor="vim"
 
 write_full_quality=True
