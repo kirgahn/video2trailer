@@ -71,7 +71,7 @@ def time_input():
 def logger(logmessage):
 	logfile="./v2t.log"
 	now=datetime.now()
-	now=now.strftime('%Y-%M-%d-%H:%M:%S.%f')[:-3]
+	now=now.strftime('%Y-%m-%d-%H:%M:%S.%f')[:-3]
 
 	try:
 		with open(logfile,mode='a', encoding='utf-8') as log_file:
@@ -361,7 +361,8 @@ def remove_slice(slices):
 		getchar()
 	return slices
 
-def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,constant_bitrate=0,crf_factor=30):
+#def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,)
+def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,keep_first_pass_log):
 	try:
 		#### encoder = either libx264 or libvpx
 		encoder="libvpx"
@@ -387,12 +388,23 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
 		print("Enconding to: " + destfile)
 		start_time=time.time()
 
-		logger("Encoding to " + destfile + ", running first pass with command: " + ffmpeg_command_pass1)
-		os.system(ffmpeg_command_pass1)
+		#### Skip first pass encoding if ffmpeg's first pass log is present. This should only happen when
+		#### we're encoding both full and variable quality videos. This could create some race conditions 
+		#### and who knows what will happen if ffmpeg makes a second pass with a corrupted first pass log!!
+		if not os.path.isfile("ffmpeg2pass-0.log"):
+			logger("Encoding to " + destfile + ", running first pass with command: " + ffmpeg_command_pass1)
+			os.system(ffmpeg_command_pass1)
+		else:
+			logger("previous first pass log file found (ffmpeg2pass-0.log), skipping first pass encoding")
 
 		logger("Encoding to " + destfile + ", running second pass with command: " + ffmpeg_command_pass2)
 		os.system(ffmpeg_command_pass2)
-		os.remove("ffmpeg2pass-0.log")
+
+		if not keep_first_pass_log:
+			logger("Removing first pass log ffmpeg2pass-0.log")
+			os.remove("ffmpeg2pass-0.log") 
+		else:
+			logger("keeping first pass log ffmpeg2pass-0.log for further encoding")
 
 		end_time=time.time()
 		elapsed_time=convert_to_minutes(end_time-start_time)
@@ -429,7 +441,7 @@ def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheig
 	
 			try:
 				logger("Encoding slice #" + str(i) + " with filename " + outfile + ", using ffmpeg command: " + ffmpeg_command)
-				print("encoding slice #" + str(i) + " with filename: " + outfile)
+				print("Encoding slice #" + str(i) + " with filename: " + outfile)
 				subprocess.call(ffmpeg_command,shell=True)
 			
 			except OSError as err:
@@ -448,16 +460,25 @@ def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheig
 		getchar()
 
 def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
-
-	#encoder="libx264" ### either x264/mp4 or libvpx/webm
+	#### Encoders
+	#### VP8:
 	encoder="libvpx" ### either x264/mp4 or libvpx/webm
+	audio_encoder="libvorbis"
+	file_ext="webm"
+	#### H264
+	#encoder="libx264" ### either x264/mp4 or libvpx/webm
+	#audio_encoder="aac"
+	#file_ext="mp4"
+
+	preview_file=destfile + "." + file_ext
+
 	font="DejaVuSans-Bold.ttf"
 	fontsize=100
 	opts=" -cpu-used 8 -threads " + str(threads)
 	#try:
 	vo_slices = []
 
-	ffmpeg_command="ffmpeg -stats -v quiet -i \'" + sourcefile + "\' -y -codec:v " + encoder + " -b:v " + str(bitrate) + " -s " + str(width) + "x" + str(height) + opts + " -c:a libvorbis -q 0 -filter_complex \""
+	ffmpeg_command="ffmpeg -stats -v quiet -i \'" + sourcefile + "\' -y -codec:v " + encoder + " -b:v " + str(bitrate) + " -s " + str(width) + "x" + str(height) + opts + " -c:a " + audio_encoder + " -q 0 -filter_complex \""
 	for i in range(len(slices)):
 		(ss,se)=slices[i]
 		ffmpeg_command=ffmpeg_command + "[0:v]trim="+ str(ss) + ":" + str(se) + ",setpts=PTS-STARTPTS[todraw" + str(i) + "]; "
@@ -468,12 +489,12 @@ def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
 		ffmpeg_command=ffmpeg_command + "[v" + str(i) + "][a" + str(i) + "]"
 	
 	ffmpeg_command=ffmpeg_command + "concat=n=" + str(len(slices)) + ":v=1:a=1[out]\" "
-	ffmpeg_command=ffmpeg_command + "-map \"[out]\" " + "\'" + destfile + "\'"
+	ffmpeg_command=ffmpeg_command + "-map \"[out]\" " + "\'" + preview_file + "\'"
 
 	start_time=time.time()
 
-	logger("Encoding preview file \"" + destfile + "\"" + " with ffmpeg command: " + ffmpeg_command)
-	print("Encoding preview file: \"" + destfile + "\"")
+	logger("Encoding preview file \"" + preview_file + "\"" + " with ffmpeg command: " + ffmpeg_command)
+	print("Encoding preview file: \"" + preview_file + "\"")
 
 	subprocess.call(ffmpeg_command,shell=True)
 
@@ -486,9 +507,9 @@ def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
 	while True:
 		confirm=getchar()
 		if confirm == "p" or confirm == "P":
-			xdg_open(destfile)
+			xdg_open(preview_file)
 		elif confirm == "r" or confirm == "R":
-			os.system("rm " +  destfile)
+			os.system("rm " + "\'" + preview_file + "\'")
 		elif confirm == "q" or confirm == "Q":
 			break
 
@@ -834,14 +855,17 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 				if slices:
 					ext=".webm" 
 					#### write the full quality webm
-					#### targetfile is destfile less the file extension (first thing after "." starting from 
-					#### the right plus resolution and extension: "_WIDTHxHEIGHT.webm"
 					if write_full_quality:
 						path="./full/"
 						check_path(path)
 						targetfile=path+destfile.rsplit( "." ,1 )[0]+"_"+str(sourcewidth)+"x"+str(sourceheight)+ext
 						#print("encoding with full quality output: " +targetfile)
-						ffmpeg_write_vo(sourcefile,slices,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads)
+						if write_full_quality and write_custom_quality:
+							keep_first_pass_log=True
+						else:
+							keep_first_pass_log=False
+						ffmpeg_write_vo(sourcefile,slices,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,keep_first_pass_log)
+						keep_first_pass_log=False
 
 					#### write the custom quality version
 					if write_custom_quality:
@@ -851,14 +875,15 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 						height=calculate_height(width,sourcewidth,sourceheight)
 						targetfile=path+destfile.rsplit( "." ,1 )[0]+"_"+str(width)+"x"+str(height)+".vbr"+str(bitrate)+"."+str(fps)+"fps"+ext
 						#print("encoding with choosen quality output: " +targetfile)
-						ffmpeg_write_vo(sourcefile,slices,targetfile,fps,width,height,bitrate,threads)
+						ffmpeg_write_vo(sourcefile,slices,targetfile,fps,width,height,bitrate,threads,keep_first_pass_log)
 
 					#### write each slice as it's own webm
 					if write_slices:
 						path="./slices/"
 						check_path(path)
 						targetfile=path+destfile.rsplit( "." ,1 )[0]
-						write_all_slices(sourcefile,slices,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate)
+						#write_all_slices(sourcefile,slices,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate)
+						write_all_slices(sourcefile,slices,targetfile,fps,width,height,bitrate,threads)
 
 					print("Encoding completed (Press any key to continue)")
 					getchar()
