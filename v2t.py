@@ -361,7 +361,6 @@ def remove_slice(slices):
 		getchar()
 	return slices
 
-#def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,)
 def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,keep_first_pass_log):
 	try:
 		#### encoder = either libx264 or libvpx
@@ -859,7 +858,6 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 						path="./full/"
 						check_path(path)
 						targetfile=path+destfile.rsplit( "." ,1 )[0]+"_"+str(sourcewidth)+"x"+str(sourceheight)+ext
-						#print("encoding with full quality output: " +targetfile)
 						if write_full_quality and write_custom_quality:
 							keep_first_pass_log=True
 						else:
@@ -874,7 +872,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 						#### find correct height value given the priginl aspect ratio
 						height=calculate_height(width,sourcewidth,sourceheight)
 						targetfile=path+destfile.rsplit( "." ,1 )[0]+"_"+str(width)+"x"+str(height)+".vbr"+str(bitrate)+"."+str(fps)+"fps"+ext
-						#print("encoding with choosen quality output: " +targetfile)
+						keep_first_pass_log=False
 						ffmpeg_write_vo(sourcefile,slices,targetfile,fps,width,height,bitrate,threads,keep_first_pass_log)
 
 					#### write each slice as it's own webm
@@ -969,6 +967,7 @@ else:
 quit_loop=False
 show_info=True
 show_slice_lenght=True
+
 try:
 	while not quit_loop:
 		## Main Menu
