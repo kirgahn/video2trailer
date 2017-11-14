@@ -515,6 +515,7 @@ def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
 def change_settings(destfile,fps,width,bitrate,threads,target_size,write_full_quality,write_custom_quality,write_slices,show_info):
 	try:
 		settings_loop=False
+		height=calculate_height(width,sourcewidth,sourceheight)
 		while not settings_loop:
 			## Settings Menu
 			print_title()
@@ -526,7 +527,7 @@ def change_settings(destfile,fps,width,bitrate,threads,target_size,write_full_qu
 			print("1) (o)utput Filename (" + destfile + ")")
 			print("2) (f)ps (" + str(fps) + ")")
 			print("3) (w)idth (" + str(width) + ")")
-			print("4) (b)itrate (" + bitrate + ")")
+			print("4) (b)itrate (" + bitrate + ") - suggested (" + str(round((width*height*fps)/10000)) + ")")
 			print("5) encoder (t)hreads (" + str(threads) + ")")
 			print("6) f(u)ll quality video output (" + str(write_full_quality) + ")")
 			print("7) (v)ariable bitrate video output (" + str(write_custom_quality) + ")")
