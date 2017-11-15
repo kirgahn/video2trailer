@@ -38,7 +38,8 @@ def time_input():
 	cursor_up = '\x1b[1A'
 
 	char_buffer=""
-	while len(char_buffer)<9:
+	#while len(char_buffer)<9:
+	while len(char_buffer)<12:
 		try:
 			char=getchar()
 			if not char==carriage_return:
@@ -48,6 +49,10 @@ def time_input():
 							char_buffer=char_buffer+":"
 							print(":",end="",flush=True)
 						if len(char_buffer)==5:
+							char_buffer=char_buffer+":"
+							print(":",end="",flush=True)
+						#if len(char_buffer)==5:
+						if len(char_buffer)==8:
 							char_buffer=char_buffer+"."
 							print(".",end="",flush=True)
 						char_buffer=char_buffer+char
