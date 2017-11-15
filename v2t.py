@@ -530,7 +530,7 @@ def change_settings(destfile,fps,width,bitrate,threads,target_size,write_full_qu
 			print("")
 			print("1) (o)utput Filename (" + destfile + ")")
 			print("2) (f)ps (" + str(fps) + ")")
-			print("3) (w)idth (" + str(width) + ")")
+			print("3) (w)idth (" + str(width) + ") - height (" + str(calculate_height(width,sourcewidth,sourceheight)) + ")")
 			print("4) (b)itrate (" + bitrate + ") - suggested (" + str(round((width*calculate_height(width,sourcewidth,sourceheight)*fps)/10000)) + ")")
 			print("5) encoder (t)hreads (" + str(threads) + ")")
 			print("6) f(u)ll quality video output (" + str(write_full_quality) + ")")
