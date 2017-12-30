@@ -874,14 +874,31 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 				print("Please insert a name for the output file")
 				custom_name=input("#")
 
-				print("Would you like to encode with full or variable quality? (f/v)")
+				print("Would you like to encode with full or variable quality? (f/v/fv)")
 				#while (custom_slice_quality != "f" or custom_slice_quality != "v"):
 				custom_slice_quality=input("#")
+
+				if custom_slice_quality=="v" or custom_slice_quality=="fv":
+					print("Please insert a custom width value ("+str(sourcewidth)+"):")
+					custom_width=int(input("#"))
+					if custom_width=="":
+						custom_width=sourcewidth
+
+				if custom_slice_quality=="v" or custom_slice_quality=="fv":
+					print("Please insert a custom bitrate value ("+str(sourcebitrate)+"):")
+					custom_bitrate=str(input("#"))
+					if custom_bitrate=="":
+						custom_bitrate=sourcebitrate
+
+				if custom_slice_quality=="v" or custom_slice_quality=="fv":
+					print("Please insert a custom fps value ("+str(sourcefps)+"):")
+					custom_fps=str(input("#"))
+					if custom_fps=="":
+						custom_fps=sourcefps
 
 				ext=".webm"
 				path="./custom/"
 				check_path(path)
-				keep_first_pass_log=False
 
 				custom_start=convert_to_minutes(ss)
 				custom_start=custom_start.replace(':','.')
@@ -902,17 +919,21 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 				custom_end=custom_end.rstrip(".")
 
 				#### write the full quality webm
-				if custom_slice_quality=="f":
+				if custom_slice_quality=="fv":
+					keep_first_pass_log=True
+				else:
+					keep_first_pass_log=False
+
+				if custom_slice_quality=="f" or custom_slice_quality=="fv":
 					targetfile=path+custom_name+"_full_"+custom_start+"_"+custom_end+"_"+str(sourcewidth)+"x"+str(sourceheight)+ext
 					ffmpeg_write_vo(sourcefile,custom_slice,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,keep_first_pass_log)
-				elif custom_slice_quality=="v":
-					#### find correct height value given the priginl aspect ratio
-					height=calculate_height(width,sourcewidth,sourceheight)
-					targetfile=path+custom_name+"_variable_"+custom_start+"_"+custom_end+"_"+str(sourcewidth)+"x"+str(sourceheight)+ext
-					ffmpeg_write_vo(sourcefile,custom_slice,targetfile,fps,width,height,bitrate,threads,keep_first_pass_log)
+				elif custom_slice_quality=="v" or custom_slice_quality=="fv":
+					#### find correct height value given the originl aspect ratio
+					custom_height=calculate_height(custom_width,sourcewidth,sourceheight)
+					targetfile=path+custom_name+"_variable_"+custom_start+"_"+custom_end+"_"+str(custom_width)+"x"+str(custom_height)+ext
+					keep_first_pass_log=False
+					ffmpeg_write_vo(sourcefile,custom_slice,targetfile,custom_fps,custom_width,custom_height,custom_bitrate,threads,keep_first_pass_log)
 
-				#print("Encoding completed (Press any key to continue)")
-				#getchar()
 				print("(p) to watch the target file, (r) to remove the preview file, (q) to resume editing ")
 				while True:
 					confirm=getchar()
