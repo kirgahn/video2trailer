@@ -38,7 +38,6 @@ def time_input():
 	cursor_up = '\x1b[1A'
 
 	char_buffer=""
-	#while len(char_buffer)<9:
 	while len(char_buffer)<12:
 		try:
 			char=getchar()
@@ -292,62 +291,62 @@ def add_slice(slices,sourceduration):
 
 	return slices
 
-def insert_slice(slices,sourceduration):
-	try:
-
-		print("In which position would you like to add a new subclip?")
-		newpos=int(input("#"))
-	
-		if not (newpos > len(slices)):
-			print("Please insert start time for the new subclip (hh:mm:ss.msc)")
-			ss=convert_to_seconds(time_input())
-	
-			print("Please insert end time for the new subclip (hh:mm:ss.msc)")
-			se=convert_to_seconds(time_input())
-	
-			if (float(ss) < sourceduration) and (float(se) < sourceduration):
-				slices.insert(newpos,[ss,se])
-			else:
-				print("Slices can't start/end after the end of the source video. (Press any key to continue)")
-				getchar()
-		else:
-			print("Invalid slice position selected. (Press any key to continue)")
-			getchar()
-	
-	except ValueError as err:
-		logger("Error: {0}".format(err))
-		print("Error: {0}".format(err))
-		print("Either specified time values are incorrect or slice position is invalid. (Press any key to continue)")
-		getchar()
-	return slices
-
-def change_slice(slices,sourceduration):
-	try:
-		print("Which slice would you like to change?")
-		change_index=int(input("#"))
-		if not (change_index > len(slices)):
-
-			print("Please insert start time for the new subclip (hh:mm:ss.msc)")
-			ss=convert_to_seconds(time_input())
-	
-			print("Please insert end time for the new subclip (hh:mm:ss.msc)")
-			se=convert_to_seconds(time_input())
-	
-			if (float(ss) < sourceduration) or (float(se) < sourceduration):
-				slices[change_index]=(ss,se)
-			else:
-				print("Slices can't start/end after the end of the source video. (Press any key to continue)")
-				getchar()
-		else:
-			print("Invalid slice position selected. (Press any key to continue)")
-			getchar()
-
-	except ValueError as err:
-		logger("Error: {0}".format(err))
-		print("Error: {0}".format(err))
-		print("Either specified time values are incorrect or slice position is invalid. (Press any key to continue)")
-		getchar()
-	return slices
+#def insert_slice(slices,sourceduration):
+#	try:
+#
+#		print("In which position would you like to add a new subclip?")
+#		newpos=int(input("#"))
+#	
+#		if not (newpos > len(slices)):
+#			print("Please insert start time for the new subclip (hh:mm:ss.msc)")
+#			ss=convert_to_seconds(time_input())
+#	
+#			print("Please insert end time for the new subclip (hh:mm:ss.msc)")
+#			se=convert_to_seconds(time_input())
+#	
+#			if (float(ss) < sourceduration) and (float(se) < sourceduration):
+#				slices.insert(newpos,[ss,se])
+#			else:
+#				print("Slices can't start/end after the end of the source video. (Press any key to continue)")
+#				getchar()
+#		else:
+#			print("Invalid slice position selected. (Press any key to continue)")
+#			getchar()
+#	
+#	except ValueError as err:
+#		logger("Error: {0}".format(err))
+#		print("Error: {0}".format(err))
+#		print("Either specified time values are incorrect or slice position is invalid. (Press any key to continue)")
+#		getchar()
+#	return slices
+#
+#def change_slice(slices,sourceduration):
+#	try:
+#		print("Which slice would you like to change?")
+#		change_index=int(input("#"))
+#		if not (change_index > len(slices)):
+#
+#			print("Please insert start time for the new subclip (hh:mm:ss.msc)")
+#			ss=convert_to_seconds(time_input())
+#	
+#			print("Please insert end time for the new subclip (hh:mm:ss.msc)")
+#			se=convert_to_seconds(time_input())
+#	
+#			if (float(ss) < sourceduration) or (float(se) < sourceduration):
+#				slices[change_index]=(ss,se)
+#			else:
+#				print("Slices can't start/end after the end of the source video. (Press any key to continue)")
+#				getchar()
+#		else:
+#			print("Invalid slice position selected. (Press any key to continue)")
+#			getchar()
+#
+#	except ValueError as err:
+#		logger("Error: {0}".format(err))
+#		print("Error: {0}".format(err))
+#		print("Either specified time values are incorrect or slice position is invalid. (Press any key to continue)")
+#		getchar()
+#	return slices
 
 def remove_slice(slices):
 	try:
@@ -766,16 +765,17 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 			print("")
 			print("0) (g)enerate slices")
 			print("1) (a)dd slice")
-			print("2) (i)nsert slice")
-			print("3) (c)hange slice")
-			print("4) (r)emove slice")
-			print("5) (d)elete all slices")
-			print("6) (e)dit all slices")
-			print("7) (s)lice preview")
-			print("8) (p)review clip")
-			print("9) (w)rite destination file/s")
-			print("10) (t)oggle slice lenght")
-			print("11) (q)uit to main menu")
+			#print("2) (i)nsert slice")
+			#print("3) (c)hange slice")
+			print("2) (r)emove slice")
+			print("3) (d)elete all slices")
+			print("4) (e)dit all slices")
+			print("5) (s)lice preview")
+			print("6) (p)review clip")
+			print("7) (c)ustom slice")
+			print("8) (w)rite destination file/s")
+			print("9) (t)oggle slice lenght")
+			print("10) (q)uit to main menu")
 			print("")
 			print_separator()
 			
@@ -793,21 +793,21 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 					slices = new_slices
 			elif any(q in slices_choice for q in ["1","A","a"]):
 				slices = add_slice(slices,sourceduration)
-			elif any(q in slices_choice for q in ["2","I","i"]):
-				slices = insert_slice(slices,sourceduration)
-			elif any(q in slices_choice for q in ["3","C","c"]):
-				if slices:
-					slices = change_slice(slices,sourceduration)
-				else:
-					print("No defined slice! (Press any key to continue)")
-					getchar()
-			elif any(q in slices_choice for q in ["4","R","r"]):
+			#elif any(q in slices_choice for q in ["2","I","i"]):
+			#	slices = insert_slice(slices,sourceduration)
+			#elif any(q in slices_choice for q in ["3","C","c"]):
+			#	if slices:
+			#		slices = change_slice(slices,sourceduration)
+			#	else:
+			#		print("No defined slice! (Press any key to continue)")
+			#		getchar()
+			elif any(q in slices_choice for q in ["2","R","r"]):
 				if slices:
 					slices = remove_slice(slices)
 				else:
 					print("No defined slice! (Press any key to continue)")
 					getchar()
-			elif any(q in slices_choice for q in ["5","D","d"]):
+			elif any(q in slices_choice for q in ["3","D","d"]):
 				if slices:
 					print("Confirm operation (y/n)")
 					sure = getchar()
@@ -816,13 +816,13 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 				else:
 					print("No defined slice! (Press any key to continue)")
 					getchar()
-			elif any(q in slices_choice for q in ["6","E","e"]):
+			elif any(q in slices_choice for q in ["4","E","e"]):
 				if slices:
 					slices = external_edit(slices,editor)
 				else:
 					print("No defined slice! (Press anykey to continue)")
 					getchar()
-			elif any(q in slices_choice for q in ["7","S","s"]):
+			elif any(q in slices_choice for q in ["5","S","s"]):
 				if slices:
 					try:
 						print("which slice would you like to preview? (slice index)")
@@ -839,7 +839,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 				else:
 					print("No defined slice! (Press any key to continue)")
 					getchar()
-			elif any(q in slices_choice for q in ["8","P","p"]):
+			elif any(q in slices_choice for q in ["6","P","p"]):
 				if slices:
 					try:
 						ext=".webm" #either .mp4 or .webm
@@ -855,7 +855,75 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 					print("No defined slice! (Press any key to continue)")
 					getchar()
 
-			elif any(q in slices_choice for q in ["9","W","w"]):
+			elif any(q in slices_choice for q in ["7","C","c"]):
+				custom_slice = []
+				custom_slice_quality=""
+
+				print("Please insert start time for the new custom slice (hh:mm:ss.msc)",flush=True)
+				ss=convert_to_seconds(time_input())
+
+				print("Please insert end time for the new custom slice (hh:mm:ss.msc)",flush=True)
+				se=convert_to_seconds(time_input())
+
+				if (float(ss) < sourceduration) and (float(se) < sourceduration):
+					custom_slice.append([ss,se])
+				else:
+					print("Slices can't start/end after the end of the source video. (Press any key to continue)")
+					getchar()
+
+				print("Please insert a name for the output file")
+				custom_name=input("#")
+
+				print("Would you like to encode with full or variable quality? (f/v)")
+				#while (custom_slice_quality != "f" or custom_slice_quality != "v"):
+				custom_slice_quality=input("#")
+
+				ext=".webm"
+				path="./custom/"
+				check_path(path)
+				keep_first_pass_log=False
+
+				custom_start=convert_to_minutes(ss)
+				custom_start=custom_start.replace(':','.')
+				padding=custom_start.count('.')
+				for i in range(1,padding):
+					custom_start=custom_start.lstrip("0")
+					custom_start=custom_start.lstrip(".")
+				custom_start=custom_start.rstrip("0")
+				custom_start=custom_start.rstrip(".")
+
+				custom_end=convert_to_minutes(se)
+				custom_end=str(custom_end).replace(':','.')
+				padding=custom_end.count('.')
+				for i in range(1,padding):
+					custom_end=custom_end.lstrip("0")
+					custom_end=custom_end.lstrip(".")
+				custom_end=custom_end.rstrip("0")
+				custom_end=custom_end.rstrip(".")
+
+				#### write the full quality webm
+				if custom_slice_quality=="f":
+					targetfile=path+custom_name+"_full_"+custom_start+"_"+custom_end+"_"+str(sourcewidth)+"x"+str(sourceheight)+ext
+					ffmpeg_write_vo(sourcefile,custom_slice,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,keep_first_pass_log)
+				elif custom_slice_quality=="v":
+					#### find correct height value given the priginl aspect ratio
+					height=calculate_height(width,sourcewidth,sourceheight)
+					targetfile=path+custom_name+"_variable_"+custom_start+"_"+custom_end+"_"+str(sourcewidth)+"x"+str(sourceheight)+ext
+					ffmpeg_write_vo(sourcefile,custom_slice,targetfile,fps,width,height,bitrate,threads,keep_first_pass_log)
+
+				#print("Encoding completed (Press any key to continue)")
+				#getchar()
+				print("(p) to watch the target file, (r) to remove the preview file, (q) to resume editing ")
+				while True:
+					confirm=getchar()
+					if confirm == "p" or confirm == "P":
+						xdg_open(targetfile)
+					elif confirm == "r" or confirm == "R":
+						os.system("rm " + "\'" + targetfile + "\'")
+					elif confirm == "q" or confirm == "Q":
+						break
+
+			elif any(q in slices_choice for q in ["8","W","w"]):
 				if slices:
 					ext=".webm" 
 					#### write the full quality webm
@@ -893,9 +961,9 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 				else:
 					print("No defined slice! (Press any key to continue)")
 					getchar()
-			elif any(q in slices_choice for q in ["10","T","t"]):
+			elif any(q in slices_choice for q in ["9","T","t"]):
 				show_slice_lenght=not show_slice_lenght
-			elif any(q in slices_choice for q in ["11","Q","q"]):
+			elif any(q in slices_choice for q in ["10","Q","q"]):
 				slices_loop=True
 		return slices
 	except (ValueError, OSError) as err:
