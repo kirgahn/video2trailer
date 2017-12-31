@@ -860,22 +860,24 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 				custom_slice = []
 				custom_slice_quality=""
 
-				print("Please insert start time for the new custom slice (hh:mm:ss.msc)",flush=True)
-				ss=convert_to_seconds(time_input())
-
-				print("Please insert end time for the new custom slice (hh:mm:ss.msc)",flush=True)
-				se=convert_to_seconds(time_input())
-
-				if (float(ss) < sourceduration) and (float(se) < sourceduration):
-					custom_slice.append([ss,se])
-				else:
-					print("Slices can't start/end after the end of the source video. (Press any key to continue)")
-					getchar()
-
 				print("Please insert a name for the output file")
 				custom_name=input("#")
 
+				ss=0
+				se=0
 				while True:
+					print("Please insert start time for your custom slice, previously("+convert_to_minutes(ss)+")",flush=True)
+					ss=convert_to_seconds(time_input())
+	
+					print("Please insert ending time for your custom slice, previously("+convert_to_minutes(se)+")",flush=True)
+					se=convert_to_seconds(time_input())
+	
+					if (float(ss) < sourceduration) and (float(se) < sourceduration):
+						custom_slice.append([ss,se])
+					else:
+						print("Slices can't start/end after the end of the source video. (Press any key to continue)")
+						getchar()
+
 					print("Would you like to encode with full or variable quality? (f/v/fv)")
 					#while (custom_slice_quality != "f" or custom_slice_quality != "v"):
 					custom_slice_quality=input("#")
