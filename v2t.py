@@ -856,6 +856,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 					getchar()
 
 			elif any(q in slices_choice for q in ["7","C","c"]):
+				#### custom slice is here
 				custom_slice = []
 				custom_slice_quality=""
 
@@ -874,74 +875,81 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 				print("Please insert a name for the output file")
 				custom_name=input("#")
 
-				print("Would you like to encode with full or variable quality? (f/v/fv)")
-				#while (custom_slice_quality != "f" or custom_slice_quality != "v"):
-				custom_slice_quality=input("#")
-
-				if custom_slice_quality=="v" or custom_slice_quality=="fv":
-					print("Please insert a custom width value ("+str(sourcewidth)+"):")
-					custom_width=int(input("#"))
-					if custom_width=="":
-						custom_width=sourcewidth
-
-				if custom_slice_quality=="v" or custom_slice_quality=="fv":
-					print("Please insert a custom bitrate value ("+str(sourcebitrate)+"):")
-					custom_bitrate=str(input("#"))
-					if custom_bitrate=="":
-						custom_bitrate=sourcebitrate
-
-				if custom_slice_quality=="v" or custom_slice_quality=="fv":
-					print("Please insert a custom fps value ("+str(sourcefps)+"):")
-					custom_fps=str(input("#"))
-					if custom_fps=="":
-						custom_fps=sourcefps
-
-				ext=".webm"
-				path="./custom/"
-				check_path(path)
-
-				custom_start=convert_to_minutes(ss)
-				custom_start=custom_start.replace(':','.')
-				padding=custom_start.count('.')
-				for i in range(1,padding):
-					custom_start=custom_start.lstrip("0")
-					custom_start=custom_start.lstrip(".")
-				custom_start=custom_start.rstrip("0")
-				custom_start=custom_start.rstrip(".")
-
-				custom_end=convert_to_minutes(se)
-				custom_end=str(custom_end).replace(':','.')
-				padding=custom_end.count('.')
-				for i in range(1,padding):
-					custom_end=custom_end.lstrip("0")
-					custom_end=custom_end.lstrip(".")
-				custom_end=custom_end.rstrip("0")
-				custom_end=custom_end.rstrip(".")
-
-				#### write the full quality webm
-				if custom_slice_quality=="fv":
-					keep_first_pass_log=True
-				else:
-					keep_first_pass_log=False
-
-				if custom_slice_quality=="f" or custom_slice_quality=="fv":
-					targetfile=path+custom_name+"_full_"+custom_start+"_"+custom_end+"_"+str(sourcewidth)+"x"+str(sourceheight)+ext
-					ffmpeg_write_vo(sourcefile,custom_slice,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,keep_first_pass_log)
-				elif custom_slice_quality=="v" or custom_slice_quality=="fv":
-					#### find correct height value given the originl aspect ratio
-					custom_height=calculate_height(custom_width,sourcewidth,sourceheight)
-					targetfile=path+custom_name+"_variable_"+custom_start+"_"+custom_end+"_"+str(custom_width)+"x"+str(custom_height)+ext
-					keep_first_pass_log=False
-					ffmpeg_write_vo(sourcefile,custom_slice,targetfile,custom_fps,custom_width,custom_height,custom_bitrate,threads,keep_first_pass_log)
-
-				print("(p) to watch the target file, (r) to remove the preview file, (q) to resume editing ")
 				while True:
-					confirm=getchar()
-					if confirm == "p" or confirm == "P":
-						xdg_open(targetfile)
-					elif confirm == "r" or confirm == "R":
-						os.system("rm " + "\'" + targetfile + "\'")
-					elif confirm == "q" or confirm == "Q":
+					print("Would you like to encode with full or variable quality? (f/v/fv)")
+					#while (custom_slice_quality != "f" or custom_slice_quality != "v"):
+					custom_slice_quality=input("#")
+
+					if custom_slice_quality=="v" or custom_slice_quality=="fv":
+						print("Please insert a custom width value ("+str(sourcewidth)+"):")
+						custom_width=str(input("#"))
+						if custom_width == "":
+							custom_width=sourcewidth
+						else:
+							custom_width=int(custom_width)
+
+					if custom_slice_quality=="v" or custom_slice_quality=="fv":
+						print("Please insert a custom bitrate value ("+str(sourcebitrate)+"):")
+						custom_bitrate=str(input("#"))
+						if custom_bitrate=="" :
+							custom_bitrate=sourcebitrate
+
+					if custom_slice_quality=="v" or custom_slice_quality=="fv":
+						print("Please insert a custom fps value ("+str(sourcefps)+"):")
+						custom_fps=str(input("#"))
+						if custom_fps=="" :
+							custom_fps=sourcefps
+
+					ext=".webm"
+					path="./custom/"
+					check_path(path)
+
+					custom_start=convert_to_minutes(ss)
+					custom_start=custom_start.replace(':','.')
+					padding=custom_start.count('.')
+					for i in range(1,padding):
+						custom_start=custom_start.lstrip("0")
+						custom_start=custom_start.lstrip(".")
+					custom_start=custom_start.rstrip("0")
+					custom_start=custom_start.rstrip(".")
+
+					custom_end=convert_to_minutes(se)
+					custom_end=str(custom_end).replace(':','.')
+					padding=custom_end.count('.')
+					for i in range(1,padding):
+						custom_end=custom_end.lstrip("0")
+						custom_end=custom_end.lstrip(".")
+					custom_end=custom_end.rstrip("0")
+					custom_end=custom_end.rstrip(".")
+
+					#### write the full quality webm
+					if custom_slice_quality=="fv":
+						keep_first_pass_log=True
+					else:
+						keep_first_pass_log=False
+
+					if custom_slice_quality=="f" or custom_slice_quality=="fv":
+						targetfile=path+custom_name+"_full_"+custom_start+"_"+custom_end+"_"+str(sourcewidth)+"x"+str(sourceheight)+ext
+						ffmpeg_write_vo(sourcefile,custom_slice,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,keep_first_pass_log)
+					elif custom_slice_quality=="v" or custom_slice_quality=="fv":
+						#### find correct height value given the originl aspect ratio
+						custom_height=calculate_height(custom_width,sourcewidth,sourceheight)
+						targetfile=path+custom_name+"_variable_"+custom_start+"_"+custom_end+"_"+str(custom_width)+"x"+str(custom_height)+ext
+						keep_first_pass_log=False
+						ffmpeg_write_vo(sourcefile,custom_slice,targetfile,custom_fps,custom_width,custom_height,custom_bitrate,threads,keep_first_pass_log)
+
+					print("(p) to play the file, (r) to remove the file, (q) to resume editing ")
+					while True:
+						confirm=getchar()
+						if confirm == "p" or confirm == "P":
+							xdg_open(targetfile)
+						elif confirm == "r" or confirm == "R":
+							os.system("rm " + "\'" + targetfile + "\'")
+						elif confirm == "q" or confirm == "Q":
+							break
+					print("try again? (y/n)")
+					keep_loop=input("#")
+					if keep_loop == "n" or keep_loop == "N":
 						break
 
 			elif any(q in slices_choice for q in ["8","W","w"]):
