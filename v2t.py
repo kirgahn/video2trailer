@@ -371,7 +371,7 @@ def remove_slice(slices):
 		getchar()
 	return slices
 
-def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,keep_first_pass_log):
+def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,keep_first_pass_log,hasaudio):
 	try:
 		#### encoder = either libx264 or libvpx
 		encoder="libvpx"
@@ -384,12 +384,19 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
 		for i in range(len(slices)):
 			(ss,se)=slices[i]
 			ffmpeg_command=ffmpeg_command + "[0:v]trim="+ str(ss) + ":" + str(se) + ",setpts=PTS-STARTPTS[v" + str(i) + "]; "
-			ffmpeg_command=ffmpeg_command + "[0:a]atrim="+ str(ss) + ":" + str(se) + ",asetpts=PTS-STARTPTS[a" + str(i) + "]; "
+			if hasaudio:
+				ffmpeg_command=ffmpeg_command + "[0:a]atrim="+ str(ss) + ":" + str(se) + ",asetpts=PTS-STARTPTS[a" + str(i) + "]; "
 
 		for i in range(len(slices)):
-			ffmpeg_command=ffmpeg_command + "[v" + str(i) + "][a" + str(i) + "]"
+			if hasaudio:
+				ffmpeg_command=ffmpeg_command + "[v" + str(i) + "][a" + str(i) + "]"
+			else:
+				ffmpeg_command=ffmpeg_command + "[v" + str(i) + "]"
 	
-		ffmpeg_command=ffmpeg_command + "concat=n=" + str(len(slices)) + ":v=1:a=1[out]\""
+		if hasaudio:
+			ffmpeg_command=ffmpeg_command + "concat=n=" + str(len(slices)) + ":v=1:a=1[out]\""
+		else:
+			ffmpeg_command=ffmpeg_command + "concat=n=" + str(len(slices)) + ":v=1[out]\""
 		ffmpeg_command_pass1=ffmpeg_command + " -an -pass 1 -map \"[out]\" -f webm " + "/dev/null"
 		ffmpeg_command_pass2=ffmpeg_command + " -pass 2 -map \"[out]\" " + "-f webm \'" + destfile + "\'"
 
@@ -425,7 +432,7 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
 		print("Error: {0}".format(err) + " (Press any key to continue)")
 		getchar()
 
-def custom_slice(sourcefile, sourcefps, sourcewidth, sourcebitrate, threads):
+def custom_slice(sourcefile, sourcefps, sourcewidth, sourcebitrate, threads, hasaudio):
 				#### custom slice is here
 				custom_slice = []
 				custom_slice_quality=""
@@ -515,7 +522,7 @@ def custom_slice(sourcefile, sourcefps, sourcewidth, sourcebitrate, threads):
 						keep_first_pass_log=False
 						targetfile=path+custom_name+"_full_"+custom_start+"_"+custom_end+"_"+str(sourcewidth)+"x"+str(sourceheight)+ext
 						logger("writing full quality custom slice with the following encoding parameters:\nname: "+custom_name+"\nstarting position: "+str(convert_to_minutes(ss))+"\nending time: "+str(convert_to_minutes(se))+"\nfps: "+str(sourcefps)+"\nresolution: "+str(sourcewidth)+"x"+str(sourceheight)+"\nbitrate: "+str(sourcebitrate)+"\nthreads: "+str(threads))
-						ffmpeg_write_vo(sourcefile,custom_slice,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,keep_first_pass_log)
+						ffmpeg_write_vo(sourcefile,custom_slice,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,keep_first_pass_log,hasaudio)
 					elif custom_slice_quality=="v":
 						keep_first_pass_log=False
 						#### find correct height value given the originl aspect ratio
@@ -524,7 +531,7 @@ def custom_slice(sourcefile, sourcefps, sourcewidth, sourcebitrate, threads):
 						keep_first_pass_log=False
 						logger("writing variable quality custom slice with the following encoding parameters:\nname: "+custom_name+"\nstarting position: "+str(convert_to_minutes(ss))+",\nending time: "+str(convert_to_minutes(se))+"\nfps: "+str(custom_fps)+"\nresolution: "+str(custom_width)+"x"+str(custom_height)+"\nbitrate: "+str(custom_bitrate)+"\nthreads: "+str(threads))
 
-						ffmpeg_write_vo(sourcefile,custom_slice,targetfile,custom_fps,custom_width,custom_height,custom_bitrate,threads,keep_first_pass_log)
+						ffmpeg_write_vo(sourcefile,custom_slice,targetfile,custom_fps,custom_width,custom_height,custom_bitrate,threads,keep_first_pass_log,hasaudio)
 
 						targetfile=path+custom_name+"_full_"+custom_start+"_"+custom_end+"_"+str(sourcewidth)+"x"+str(sourceheight)+ext
 					elif custom_slice_quality=="fv":
@@ -532,14 +539,14 @@ def custom_slice(sourcefile, sourcefps, sourcewidth, sourcebitrate, threads):
 
 						targetfile=path+custom_name+"_full_"+custom_start+"_"+custom_end+"_"+str(sourcewidth)+"x"+str(sourceheight)+ext
 						keep_first_pass_log=True
-						ffmpeg_write_vo(sourcefile,custom_slice,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,keep_first_pass_log)
+						ffmpeg_write_vo(sourcefile,custom_slice,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,keep_first_pass_log,hasaudio)
 						#### find correct height value given the originl aspect ratio
 						custom_height=calculate_height(custom_width,sourcewidth,sourceheight)
 						targetfile=path+custom_name+"_variable_"+custom_start+"_"+custom_end+"_"+str(custom_width)+"x"+str(custom_height)+ext
 						keep_first_pass_log=False
 						logger("writing variable quality custom slice with the following encoding parameters:\nname: "+custom_name+"\nstarting position: "+str(convert_to_minutes(ss))+",\nending time: "+str(convert_to_minutes(se))+"\nfps: "+str(custom_fps)+"\nresolution: "+str(custom_width)+"x"+str(custom_height)+"\nbitrate: "+str(custom_bitrate)+"\nthreads: "+str(threads))
 
-						ffmpeg_write_vo(sourcefile,custom_slice,targetfile,custom_fps,custom_width,custom_height,custom_bitrate,threads,keep_first_pass_log)
+						ffmpeg_write_vo(sourcefile,custom_slice,targetfile,custom_fps,custom_width,custom_height,custom_bitrate,threads,keep_first_pass_log,hasaudio)
 					print("(p) to play the file, (r) to remove the file, (q) to resume editing, (t) to retry",flush=True)
 					while True:
 						confirm=getchar()
@@ -561,7 +568,7 @@ def custom_slice(sourcefile, sourcefps, sourcewidth, sourcebitrate, threads):
 #					if keep_loop == "n" or keep_loop == "N":
 #						break
 
-def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate):
+def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,hasaudio):
 	try:
 		#### encoder = either libx264 or libvpx
 		encoder="libvpx"
@@ -576,12 +583,23 @@ def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheig
 
 			#### with libvpx options
 			ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -r " + str(sourcefps) + " -codec:v " + encoder + "  -quality good -cpu-used 0  -b:v " + str(sourcebitrate) + "k -qmin 10 -qmax 42 -s " + str(sourcewidth) + "x" + str(sourceheight) + " -c:a libvorbis -q 0 -threads " + str(threads) + " -filter_complex \""
+
+			if hasaudio:
+				ffmpeg_command=ffmpeg_command + " -c:a libvorbis " 
+
+			ffmpeg_command=ffmpeg_command + "-q 0 -threads " + str(threads) + " -filter_complex \""
 	
 			ffmpeg_command=ffmpeg_command + "[0:v]trim="+ str(ss) + ":" + str(se) + ",setpts=PTS-STARTPTS[v" + str(i) + "]; "
-			ffmpeg_command=ffmpeg_command + "[0:a]atrim="+ str(ss) + ":" + str(se) + ",asetpts=PTS-STARTPTS[a" + str(i) + "]; "
+
+			if hasaudio:
+				ffmpeg_command=ffmpeg_command + "[0:a]atrim="+ str(ss) + ":" + str(se) + ",asetpts=PTS-STARTPTS[a" + str(i) + "]; "
 			ffmpeg_command=ffmpeg_command + "[v" + str(i) + "][a" + str(i) + "]"
 		
-			ffmpeg_command=ffmpeg_command + "concat=n=1:v=1:a=1[out]\" "
+			if hasaudio:
+				ffmpeg_command=ffmpeg_command + "concat=n=1:v=1:a=1[out]\" "
+			else:
+				ffmpeg_command=ffmpeg_command + "concat=n=1:v=1[out]\" "
+				
 			ffmpeg_command=ffmpeg_command + "-map \"[out]\" " + outfile
 	
 			try:
@@ -868,12 +886,20 @@ def parse_ffprobe_info(sourcefile):
 	sourcefps=int(j['streams'][video_stream_pos]['r_frame_rate'][:2])
 	sourcebitrate=int(j['format']['bit_rate'])/1000
 	sourceduration=math.floor(float(j['format']['duration']))
+
+	for i  in range(len(j['streams'])):
+			codec_type=j['streams'][i]['codec_type']
+			if codec_type=='audio':
+					hasaudio=True
+			else:
+					hasaudio=False
 	
 	logger("Parsed info:")
 	logger("Resolution is: " + str(sourcewidth) + "x" + str(sourceheight))
 	logger("FPS is: " + str(sourcefps))
 	logger("Bitrate is: " + str(sourcebitrate))
 	logger("Source durations is: " + str(sourceduration))
+	logger("Source has audio: " + str(hasaudio))
 
 	#### DEBUG :: UnicodeDecodeError: 'ascii' codec can't decode byte 0xe2 in position 3714: ordinal not in range(128)
 	#print(sourcewidth)
@@ -883,7 +909,7 @@ def parse_ffprobe_info(sourcefile):
 	#print(str(sourceduration))
 	#### DEBUG
 
-	return (sourcewidth,sourceheight,sourcefps,sourcebitrate,sourceduration)
+	return (sourcewidth,sourceheight,sourcefps,sourcebitrate,sourceduration,hasaudio)
 
 def print_source_info(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourceheight,sourcefps):
 	(columns,rows)=terminal_size()
@@ -990,7 +1016,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 					getchar()
 
 			elif any(q in slices_choice for q in ["7","C","c"]):
-				custom_slice(sourcefile, sourcefps, sourcewidth, sourcebitrate, threads)
+				custom_slice(sourcefile, sourcefps, sourcewidth, sourcebitrate, threads, hasaudio)
 			elif any(q in slices_choice for q in ["8","W","w"]):
 				if slices:
 					ext=".webm" 
@@ -1003,7 +1029,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 							keep_first_pass_log=True
 						else:
 							keep_first_pass_log=False
-						ffmpeg_write_vo(sourcefile,slices,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,keep_first_pass_log)
+						ffmpeg_write_vo(sourcefile,slices,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,keep_first_pass_log,hasaudio)
 						if not keep_first_pass_log:
 							print("Encoding completed. Press (p) to play the encoded file, (r) to remove the file, (q) to resume editing",flush=True)
 							getchar()
@@ -1025,7 +1051,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 						height=calculate_height(width,sourcewidth,sourceheight)
 						targetfile=path+destfile.rsplit( "." ,1 )[0]+"_"+str(width)+"x"+str(height)+".vbr"+str(bitrate)+"."+str(fps)+"fps"+ext
 						keep_first_pass_log=False
-						ffmpeg_write_vo(sourcefile,slices,targetfile,fps,width,height,bitrate,threads,keep_first_pass_log)
+						ffmpeg_write_vo(sourcefile,slices,targetfile,fps,width,height,bitrate,threads,keep_first_pass_log,hasaudio)
 
 						print("Encoding completed. Press (p) to play the encoded file, (r) to remove the file, (q) to resume editing",flush=True)
 						getchar()
@@ -1044,7 +1070,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 						check_path(path)
 						targetfile=path+destfile.rsplit( "." ,1 )[0]
 						#write_all_slices(sourcefile,slices,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate)
-						write_all_slices(sourcefile,slices,targetfile,fps,width,height,bitrate,threads)
+						write_all_slices(sourcefile,slices,targetfile,fps,width,height,bitrate,threads,hasaudio)
 
 						print("Encoding completed (Press any key to continue)")
 						getchar()
@@ -1058,7 +1084,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 		print("Error: {0}".format(err) + " (Press any key to continue)")
 		getchar()
 
-def generate_autotrailer(sourcefile, destfile, sourcewidth, sourceheight, fps, width, bitrate, threads, nslices, outputlenght, sourceduration):
+def generate_autotrailer(sourcefile, destfile, sourcewidth, sourceheight, fps, width, bitrate, threads, nslices, outputlenght, sourceduration, hasaudio):
 	print("sourceduration: "+str(sourceduration)+", outputlenght: "+str(outputlenght))
 	if sourceduration > 0 and outputlenght < sourceduration:
 		sliceduration=round(outputlenght/nslices)
@@ -1067,7 +1093,7 @@ def generate_autotrailer(sourcefile, destfile, sourcewidth, sourceheight, fps, w
 		logger("generating autotrailer...")
 		height=calculate_height(width,sourcewidth,sourceheight)
 		keep_first_pass_log=False
-		ffmpeg_write_vo(sourcefile,slices,destfile,fps,width,height,bitrate,threads,keep_first_pass_log)
+		ffmpeg_write_vo(sourcefile,slices,destfile,fps,width,height,bitrate,threads,keep_first_pass_log,hasaudio)
 		print("trailer generated, quitting...")
 		logger("trailer generated, quitting...")
 	else:
@@ -1098,13 +1124,13 @@ if not sourcefile[:4]=="http" and not os.path.isfile(sourcefile):
 if sourcefile.lower().endswith(('.v2t')):
 	state_file_name=sourcefile
 	(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,write_slices) = load_state(state_file_name)
-	(sourcewidth,sourceheight,sourcefps,sourcebitrate,sourceduration)=parse_ffprobe_info(sourcefile)
+	(sourcewidth,sourceheight,sourcefps,sourcebitrate,sourceduration,hasaudio)=parse_ffprobe_info(sourcefile)
 else:
 	if sourcefile[:4]=="http":
 		sourcefile=youtube_dl_get_url(sourcefile)
 
 	state_file_name=sourcefile + ".v2t"
-	(sourcewidth,sourceheight,sourcefps,sourcebitrate,sourceduration)=parse_ffprobe_info(sourcefile)
+	(sourcewidth,sourceheight,sourcefps,sourcebitrate,sourceduration,hasaudio)=parse_ffprobe_info(sourcefile)
 
 	try:
 		with open(state_file_name,encoding='utf-8'):
@@ -1150,7 +1176,7 @@ else:
 	if args.autotrailer:
 		if outputlenght > 0 and nslices > 0:
 			logger("calling autotrailer")
-			generate_autotrailer(sourcefile, destfile, sourcewidth, sourceheight, fps, width, bitrate, threads, nslices, outputlenght, sourceduration)
+			generate_autotrailer(sourcefile, destfile, sourcewidth, sourceheight, fps, width, bitrate, threads, nslices, outputlenght, sourceduration, hasaudio)
 			sys.exit()
 		else:
 			print("When using -a (autotrailer) you must specify at least the number of slices (-n) and the target video duration (-l). Quitting...")
