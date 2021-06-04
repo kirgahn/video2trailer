@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import random
 from datetime import datetime, timedelta
@@ -15,6 +15,9 @@ import subprocess
 parser = argparse.ArgumentParser()
 parser.add_argument("sourcefile", help="Source video file", type=str)
 #parser.add_argument("-v", "--verbose", help="Print additional info", action="store_true" )
+parser.add_argument("-a", "--autotrailer", default=False, help="automatically generate output file given the number of slices and time set - also uses other parameter such as width, bitrate, etc.", action="store_true" )
+parser.add_argument("-l", "--outputlenght", help="target lenght/duration of the output video - only used in conjuction with -a", type=int )
+parser.add_argument("-n", "--nslices", help="target number of slices of the output video - only used in conjuction with -a", type=int )
 parser.add_argument("-d", "--destfile", help="Destination video file, if unspecified append \"_trailer.webm\" to source filename", type=str)
 parser.add_argument("-f", "--fps", help="Output videofile frames per second, if empty assumes source fps", type=int)
 parser.add_argument("-w", "--width", help="Resolution width of the output file in pixels, if empty assumes source width", type=int)
@@ -190,15 +193,15 @@ def print_separator():
 	print("=" * columns)
 
 #### generate random slices ####
-def generate_slices(sourceduration):
+def generate_slices(sourceduration, duration, sliceduration):
 	slices = []
 	try:
-		print("Please select the overall duration for the clip in seconds")
-		duration=int(input("# "))
-	
-		print("Please select the duration for each slice in seconds")
-		sliceduration=int(input("# "))
+		if duration == 0:
+			print("Please select the overall duration for the clip in seconds")
+			duration=int(input("# "))
 
+			print("Please select the duration for each slice in seconds")
+			sliceduration=int(input("# "))
 		logger("Generating slices with overall clip duration of " + str(duration) + " secs and slice duration of " + str(sliceduration)+ " secs" )
 	
 		prevpos = 0
@@ -927,7 +930,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 	
 			if any(q in slices_choice for q in ["0","G","g"]):
 				new_slices=[]
-				new_slices = generate_slices(sourceduration)
+				new_slices = generate_slices(sourceduration, 0, 0)
 				if new_slices:
 					slices = new_slices
 			elif any(q in slices_choice for q in ["1","A","a"]):
@@ -1055,6 +1058,22 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 		print("Error: {0}".format(err) + " (Press any key to continue)")
 		getchar()
 
+def generate_autotrailer(sourcefile, destfile, sourcewidth, sourceheight, fps, width, bitrate, threads, nslices, outputlenght, sourceduration):
+	print("sourceduration: "+str(sourceduration)+", outputlenght: "+str(outputlenght))
+	if sourceduration > 0 and outputlenght < sourceduration:
+		sliceduration=round(outputlenght/nslices)
+		slices=generate_slices(sourceduration, outputlenght, sliceduration)
+
+		logger("generating autotrailer...")
+		height=calculate_height(width,sourcewidth,sourceheight)
+		keep_first_pass_log=False
+		ffmpeg_write_vo(sourcefile,slices,destfile,fps,width,height,bitrate,threads,keep_first_pass_log)
+		print("trailer generated, quitting...")
+		logger("trailer generated, quitting...")
+	else:
+		print("sourcefile too short, aborting...")
+		logger("sourcefile too short, aborting...")
+
 #################### BEGIN #########################
 
 #### Parse arguments and load state eventually
@@ -1119,6 +1138,24 @@ else:
 			target_size=0
 		else:
 			target_size=args.targetsize
+		if not args.nslices:
+			nslices=0
+		else:
+			nslices=args.nslices
+		if not args.outputlenght:
+			outputlenght=0
+		else:
+			outputlenght=args.outputlenght
+
+	if args.autotrailer:
+		if outputlenght > 0 and nslices > 0:
+			logger("calling autotrailer")
+			generate_autotrailer(sourcefile, destfile, sourcewidth, sourceheight, fps, width, bitrate, threads, nslices, outputlenght, sourceduration)
+			sys.exit()
+		else:
+			print("When using -a (autotrailer) you must specify at least the number of slices (-n) and the target video duration (-l). Quitting...")
+			logger("Quitting video2trailer")
+			sys.exit()
 
 ## MAIN LOOP BEGINS HERE
 quit_loop=False
