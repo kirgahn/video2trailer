@@ -15,4 +15,5 @@ dependecies(***):
 # examples
 
 - Autotrailer: generate a trailer that lasts 10 seconds and has 5 slices, called test.webm
+
 v2t -a -l 10 -n 5 -d test.webm my_video.mp4
