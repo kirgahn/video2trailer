@@ -206,16 +206,18 @@ def generate_slices(sourceduration, duration, sliceduration):
 	
 		prevpos = 0
 		cycles = duration/sliceduration
+		#print("DEBUG duration: "+str(duration)+", sliceduration: "+str(sliceduration)+", cycles: "+str(cycles))
 		step = 100/cycles
 		s=1
 		n=1
 		
 		while n <= cycles and ((int(prevpos))+sliceduration < int(sourceduration)):
-			s = random.randint(prevpos+sliceduration,round(int(sourceduration)/100*(n*step)))
+			s = random.randint(round(prevpos+sliceduration),round(int(sourceduration)/100*(n*step)))
 			prevpos = s
 			slices.append([s,s+sliceduration])
 			n = n + 1
 		logger("Generated " + str(len(slices)) + " slices")
+		#print("DEBUG: Generated " + str(len(slices)) + " slices")
 		return slices
 	except (OSError, ValueError) as err:
 		logger("Error: {0}".format(err))
@@ -1087,7 +1089,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 def generate_autotrailer(sourcefile, destfile, sourcewidth, sourceheight, fps, width, bitrate, threads, nslices, outputlenght, sourceduration, hasaudio):
 	print("sourceduration: "+str(sourceduration)+", outputlenght: "+str(outputlenght))
 	if sourceduration > 0 and outputlenght < sourceduration:
-		sliceduration=round(outputlenght/nslices)
+		sliceduration=round(outputlenght/nslices,2)
 		slices=generate_slices(sourceduration, outputlenght, sliceduration)
 
 		logger("generating autotrailer...")
