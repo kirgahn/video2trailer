@@ -18,6 +18,8 @@ parser.add_argument("sourcefile", help="Source video file", type=str)
 parser.add_argument("-a", "--autotrailer", default=False, help="automatically generate output file given the number of slices and time set - also uses other parameter such as width, bitrate, etc.", action="store_true" )
 parser.add_argument("-l", "--outputlenght", help="target lenght/duration of the output video - only used in conjuction with -a", type=int )
 parser.add_argument("-n", "--nslices", help="target number of slices of the output video - only used in conjuction with -a", type=int )
+parser.add_argument("-z", "--sceneanalyzer", default=False, help="use scene analyser to automatically detect the number and timestamps of the scenes. Used in conjunction with -a, ignores -n", action="store_true" )
+parser.add_argument("-zt", "--analyzerthreshold", help="optionally specify a threshold for the scene analyser, ranging from 0.1 to 1. The number of scenes found increases with smaller values. default set to 0.4", type=float )
 parser.add_argument("-d", "--destfile", help="Destination video file, if unspecified append \"_trailer.webm\" to source filename", type=str)
 parser.add_argument("-f", "--fps", help="Output videofile frames per second, if empty assumes source fps", type=int)
 parser.add_argument("-w", "--width", help="Resolution width of the output file in pixels, if empty assumes source width", type=int)
@@ -26,7 +28,7 @@ parser.add_argument("-t", "--threads", help="Number of threads to use when encod
 parser.add_argument("-s", "--targetsize", help="Target size in MB for the final compressed video", type=int)
 
 args = parser.parse_args()
-	
+
 #### Functions #####
 
 def validate_string(test_str):
@@ -151,13 +153,13 @@ def convert_to_minutes(seconds):
 def convert_to_seconds(stime):
 	try:
 		msecs_found=False
-		if stime.find(".") != -1: 
+		if stime.find(".") != -1:
 			(hours,msecs)=stime.split(".")
 			msecs_found=True
 		else:
 			hours=stime
 		secs=str(sum(int(x) * 60 ** i for i,x in enumerate(reversed(hours.split(":")))))
-		
+
 		if msecs_found:
 				secs=secs + "." + msecs
 		else:
@@ -203,14 +205,14 @@ def generate_slices(sourceduration, duration, sliceduration):
 			print("Please select the duration for each slice in seconds")
 			sliceduration=int(input("# "))
 		logger("Generating slices with overall clip duration of " + str(duration) + " secs and slice duration of " + str(sliceduration)+ " secs" )
-	
+
 		prevpos = 0
 		cycles = duration/sliceduration
 		#print("DEBUG duration: "+str(duration)+", sliceduration: "+str(sliceduration)+", cycles: "+str(cycles))
 		step = 100/cycles
 		s=1
 		n=1
-		
+
 		while n <= cycles and ((int(prevpos))+sliceduration < int(sourceduration)):
 			s = random.randint(round(prevpos+sliceduration),round(int(sourceduration)/100*(n*step)))
 			prevpos = s
@@ -232,7 +234,7 @@ def print_duration(slices):
 		diff=float(se)-float(ss)
 		total_duration=total_duration+diff
 	print("Total video lenght: " + str(convert_to_minutes(total_duration)) )
-	
+
 def print_slices(slices,show_info,show_slice_lenght):
 	(columns,rows)=os.get_terminal_size()
 	if show_info:
@@ -246,22 +248,22 @@ def print_slices(slices,show_info,show_slice_lenght):
 
 	print("Selected slices:")
 	print("")
-	
+
 	available_rows=int(rows)-menu_rows
 	slice_columns=math.ceil(len(slices)/available_rows)
 	slices_per_column=math.ceil(len(slices)/slice_columns)
 	separator="	"
-	
+
 #	print("slices: " + str(len(slices)))
 #	print("rows: " + str(rows))
 #	print("available rows: " + str(available_rows))
 #	print("chars per row: " + str(columns))
 #	print("number of pagination columns: " + str(slice_columns))
 #	print("number of slices per column: " + str(slices_per_column))
-	
+
 	print_str=""
 	print_out=[]
-	
+
 	for a in range(available_rows):
 		print_str=""
 		num=a
@@ -279,7 +281,7 @@ def print_slices(slices,show_info,show_slice_lenght):
 	for i in range(len(print_out)):
 		if i <= available_rows:
 			print(print_out[i])
-		
+
 def add_slice(slices,sourceduration):
 	try:
 		print("Please insert start time for the new subclip (hh:mm:ss.msc)",flush=True)
@@ -304,14 +306,14 @@ def add_slice(slices,sourceduration):
 #
 #		print("In which position would you like to add a new subclip?")
 #		newpos=int(input("#"))
-#	
+#
 #		if not (newpos > len(slices)):
 #			print("Please insert start time for the new subclip (hh:mm:ss.msc)")
 #			ss=convert_to_seconds(time_input())
-#	
+#
 #			print("Please insert end time for the new subclip (hh:mm:ss.msc)")
 #			se=convert_to_seconds(time_input())
-#	
+#
 #			if (float(ss) < sourceduration) and (float(se) < sourceduration):
 #				slices.insert(newpos,[ss,se])
 #			else:
@@ -320,7 +322,7 @@ def add_slice(slices,sourceduration):
 #		else:
 #			print("Invalid slice position selected. (Press any key to continue)")
 #			getchar()
-#	
+#
 #	except ValueError as err:
 #		logger("Error: {0}".format(err))
 #		print("Error: {0}".format(err))
@@ -336,10 +338,10 @@ def add_slice(slices,sourceduration):
 #
 #			print("Please insert start time for the new subclip (hh:mm:ss.msc)")
 #			ss=convert_to_seconds(time_input())
-#	
+#
 #			print("Please insert end time for the new subclip (hh:mm:ss.msc)")
 #			se=convert_to_seconds(time_input())
-#	
+#
 #			if (float(ss) < sourceduration) or (float(se) < sourceduration):
 #				slices[change_index]=(ss,se)
 #			else:
@@ -394,7 +396,7 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
 				ffmpeg_command=ffmpeg_command + "[v" + str(i) + "][a" + str(i) + "]"
 			else:
 				ffmpeg_command=ffmpeg_command + "[v" + str(i) + "]"
-	
+
 		if hasaudio:
 			ffmpeg_command=ffmpeg_command + "concat=n=" + str(len(slices)) + ":v=1:a=1[out]\""
 		else:
@@ -407,7 +409,7 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
 		start_time=time.time()
 
 		#### Skip first pass encoding if ffmpeg's first pass log is present. This should only happen when
-		#### we're encoding both full and variable quality videos. This could create some race conditions 
+		#### we're encoding both full and variable quality videos. This could create some race conditions
 		#### and who knows what will happen if ffmpeg makes a second pass with a corrupted first pass log!!
 		if not os.path.isfile("ffmpeg2pass-0.log"):
 			logger("Encoding to " + destfile + ", running first pass with command: " + ffmpeg_command_pass1)
@@ -420,7 +422,7 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
 
 		if not keep_first_pass_log:
 			logger("Removing first pass log ffmpeg2pass-0.log")
-			os.remove("ffmpeg2pass-0.log") 
+			os.remove("ffmpeg2pass-0.log")
 		else:
 			logger("keeping first pass log ffmpeg2pass-0.log for further encoding")
 
@@ -428,7 +430,7 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
 		elapsed_time=convert_to_minutes(end_time-start_time)
 		logger("Encoding done, elapsed time with " + str(threads) + " threads is: " + elapsed_time)
 		print("Time elapsed: " + elapsed_time)
-		
+
 	except (ValueError, OSError) as err:
 		logger("Error: {0}".format(err))
 		print("Error: {0}".format(err) + " (Press any key to continue)")
@@ -456,7 +458,7 @@ def custom_slice(sourcefile, sourcefps, sourcewidth, sourcebitrate, threads, has
 						ss=float(ss_input)
 					else:
 						ss=ss_save
-	
+
 					print("Please insert ending time for your custom slice, previously("+convert_to_minutes(se)+")",flush=True)
 					se_save=se
 					se_input=convert_to_seconds(time_input())
@@ -464,7 +466,7 @@ def custom_slice(sourcefile, sourcefps, sourcewidth, sourcebitrate, threads, has
 						se=float(se_input)
 					else:
 						se=se_save
-	
+
 					if (float(ss) < sourceduration) and (float(se) < sourceduration):
 						custom_slice = []
 						custom_slice.append([ss,se])
@@ -587,28 +589,28 @@ def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheig
 			ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -r " + str(sourcefps) + " -codec:v " + encoder + "  -quality good -cpu-used 0  -b:v " + str(sourcebitrate) + "k -qmin 10 -qmax 42 -s " + str(sourcewidth) + "x" + str(sourceheight) + " -c:a libvorbis -q 0 -threads " + str(threads) + " -filter_complex \""
 
 			if hasaudio:
-				ffmpeg_command=ffmpeg_command + " -c:a libvorbis " 
+				ffmpeg_command=ffmpeg_command + " -c:a libvorbis "
 
 			ffmpeg_command=ffmpeg_command + "-q 0 -threads " + str(threads) + " -filter_complex \""
-	
+
 			ffmpeg_command=ffmpeg_command + "[0:v]trim="+ str(ss) + ":" + str(se) + ",setpts=PTS-STARTPTS[v" + str(i) + "]; "
 
 			if hasaudio:
 				ffmpeg_command=ffmpeg_command + "[0:a]atrim="+ str(ss) + ":" + str(se) + ",asetpts=PTS-STARTPTS[a" + str(i) + "]; "
 			ffmpeg_command=ffmpeg_command + "[v" + str(i) + "][a" + str(i) + "]"
-		
+
 			if hasaudio:
 				ffmpeg_command=ffmpeg_command + "concat=n=1:v=1:a=1[out]\" "
 			else:
 				ffmpeg_command=ffmpeg_command + "concat=n=1:v=1[out]\" "
-				
+
 			ffmpeg_command=ffmpeg_command + "-map \"[out]\" " + outfile
-	
+
 			try:
 				logger("Encoding slice #" + str(i) + " with filename " + outfile + ", using ffmpeg command: " + ffmpeg_command)
 				print("Encoding slice #" + str(i) + " with filename: " + outfile)
 				subprocess.call(ffmpeg_command,shell=True)
-			
+
 			except OSError as err:
 				logger("Error: {0}".format(err))
 				print("Error: {0}".format(err) + " (Press any key to continue)")
@@ -649,10 +651,10 @@ def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
 		ffmpeg_command=ffmpeg_command + "[0:v]trim="+ str(ss) + ":" + str(se) + ",setpts=PTS-STARTPTS[todraw" + str(i) + "]; "
 		ffmpeg_command=ffmpeg_command + "[todraw" + str(i) + "]drawtext=fontsize="+ str(fontsize) + ":fontcolor=black:fontfile=" + font + ":text=" + str(i) + "[v" + str(i) + "]; "
 		ffmpeg_command=ffmpeg_command + "[0:a]atrim="+ str(ss) + ":" + str(se) + ",asetpts=PTS-STARTPTS[a" + str(i) + "]; "
-	
+
 	for i in range(len(slices)):
 		ffmpeg_command=ffmpeg_command + "[v" + str(i) + "][a" + str(i) + "]"
-	
+
 	ffmpeg_command=ffmpeg_command + "concat=n=" + str(len(slices)) + ":v=1:a=1[out]\" "
 	ffmpeg_command=ffmpeg_command + "-map \"[out]\" " + "\'" + preview_file + "\'"
 
@@ -700,10 +702,10 @@ def change_settings(destfile,fps,width,bitrate,threads,target_size,write_full_qu
 			print("9) (q)uit to main menu")
 			print("")
 			print_separator()
-	
+
 			print("#",end="",flush=True)
 			settings_choice=getchar()
-	
+
 			if any(q in settings_choice for q in ["1","O","o"]):
 				new_destfile = input("destination file: ")
 				if new_destfile:
@@ -736,7 +738,7 @@ def change_settings(destfile,fps,width,bitrate,threads,target_size,write_full_qu
 		logger("Error: {0}".format(err))
 		print("Error: {0}".format(err) + " (Press any key to continue)")
 		getchar()
-		
+
 
 #### Load State ####
 def load_state(state_file_name):
@@ -750,7 +752,7 @@ def load_state(state_file_name):
 			state_file.readline().strip()
 			state_file.readline().strip()
 			sourcefile = state_file.readline().rstrip()
-				
+
 			destfile = state_file.readline().rstrip()
 			fps = int(state_file.readline().rstrip())
 			bitrate = (state_file.readline().rstrip())
@@ -765,7 +767,7 @@ def load_state(state_file_name):
 			state_file.readline().rstrip()
 			state_file.readline().rstrip()
 			state_file.readline().rstrip()
-	
+
 			for a_line in state_file:
 				line_number += 1
 				slice_line=a_line.rstrip()
@@ -804,11 +806,11 @@ def save_state(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,
 			state_file.write(str(int(write_full_quality))+"\n")
 			state_file.write(str(int(write_custom_quality))+"\n")
 			state_file.write(str(int(write_slices))+"\n")
-			
+
 			state_file.write(""+"\n")
 			state_file.write("slices"+"\n")
 			state_file.write("-"*12+"\n")
-	
+
 			for a_line in range(len(slices)):
 				(ss,se)=slices[a_line]
 				ss=convert_to_minutes(ss)
@@ -841,7 +843,7 @@ def external_edit(slices,editor):
 								i += 1
 
 		logger("Editing slices with external editor using command: " + editor + " " + tmpfile)
-		subprocess.call(editor + " " + "\"" + tmpfile + "\"",shell=True)	
+		subprocess.call(editor + " " + "\"" + tmpfile + "\"",shell=True)
 
 		slices=[]
 		with open(tmpfile, encoding='utf-8') as state_file:
@@ -875,14 +877,14 @@ def parse_ffprobe_info(sourcefile):
 	stream_info = subprocess.getoutput(command)
 	j = json.loads(stream_info)
 	logger("Dumping media info json file: " + str(j))
-	
+
 	#### ['streams'] is an array that includes audio and video streams
 	#### therefore we look for the position of the first video stream
 	for i  in range(len(j['streams'])):
 			codec_type=j['streams'][i]['codec_type']
 			if codec_type=='video':
 					video_stream_pos=i
-	
+
 	sourcewidth=j['streams'][video_stream_pos]['width']
 	sourceheight=j['streams'][video_stream_pos]['height']
 	sourcefps=int(j['streams'][video_stream_pos]['r_frame_rate'][:2])
@@ -895,7 +897,7 @@ def parse_ffprobe_info(sourcefile):
 					hasaudio=True
 			else:
 					hasaudio=False
-	
+
 	logger("Parsed info:")
 	logger("Resolution is: " + str(sourcewidth) + "x" + str(sourceheight))
 	logger("FPS is: " + str(sourcefps))
@@ -920,7 +922,7 @@ def print_source_info(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth
 	else:
 		sfilename=sourcefile
 
-	print("source file: \"" + sfilename + "\"") 
+	print("source file: \"" + sfilename + "\"")
 	print("resolution: " + str(sourcewidth) + "x" + str(sourceheight) + " - fps: " + str(fps) + " - bitrate: " + str(sourcebitrate) + "k - lenght: " + str(convert_to_minutes(sourceduration)))
 
 def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourceheight,sourcefps,show_info,show_slice_lenght):
@@ -948,14 +950,14 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 			print("10) (q)uit to main menu")
 			print("")
 			print_separator()
-			
+
 			if slices:
 				print_duration(slices)
 				print_slices(slices,show_info,show_slice_lenght)
-	
+
 			print("#",end="",flush=True)
 			slices_choice=getchar()
-	
+
 			if any(q in slices_choice for q in ["0","G","g"]):
 				new_slices=[]
 				new_slices = generate_slices(sourceduration, 0, 0)
@@ -1021,7 +1023,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 				custom_slice(sourcefile, sourcefps, sourcewidth, sourcebitrate, threads, hasaudio)
 			elif any(q in slices_choice for q in ["8","W","w"]):
 				if slices:
-					ext=".webm" 
+					ext=".webm"
 					#### write the full quality webm
 					if write_full_quality:
 						path="./full/"
@@ -1102,6 +1104,60 @@ def generate_autotrailer(sourcefile, destfile, sourcewidth, sourceheight, fps, w
 		print("sourcefile too short, aborting...")
 		logger("sourcefile too short, aborting...")
 
+def scene_analyzer(sourcefile,outputlenght,sourceduration,analyzerthreshold):
+    ffmpeg_command="ffmpeg -nostdin -i \""+sourcefile+"\" -filter:v \"select='gt(scene,"+str(analyzerthreshold)+")',showinfo\" -f null - 2>\""+sourcefile+".sceneanalyzer\""
+    logger("Running sceneanalyzer with command:"+ffmpeg_command)
+    print("Analyzing sourcefile")
+    print("DEBUG: Running sceneanalyzer with command:"+ffmpeg_command)
+
+    os.system(ffmpeg_command)
+    print("DEBUG: reading scenes")
+
+    print("Parsing scenes")
+    scene_parser="grep showinfo \""+sourcefile+".sceneanalyzer\" | grep pts_time:[0-9.]* -o | grep '[0-9]*\.[0-9]*' |cut -d \":\" -f 2 > \""+sourcefile+".scenes\""
+    print("DEBUG: Running scene parser with command:"+scene_parser)
+    os.system(scene_parser)
+
+    scenes=[]
+    with open(sourcefile+".scenes","r",encoding='utf-8') as analizerfile:
+        for line in analizerfile:
+            scenes.append(float(line))
+    print("Found "+str(len(scenes))+" scenes")
+    logger("Found "+str(len(scenes))+" scenes")
+
+    logger("Removing temporary files")
+    os.remove(sourcefile+".sceneanalyzer")
+    os.remove(sourcefile+".scenes")
+
+    slice_duration=float(outputlenght/len(scenes))
+    print("DEBUG: slice duration: "+str(slice_duration))
+    logger("DEBUG: slice duration: "+str(slice_duration))
+
+    slices=[]
+    for i in range(len(scenes)):
+        if (scenes[i]+slice_duration < sourceduration):
+            slices.append([scenes[i],(scenes[i]+slice_duration)])
+        else:
+            slices.append([scenes[i],(sourceduration)])
+        logger("calculated slices: "+str(slices[i]))
+    return slices
+
+def generate_sceneanalyzer_autotrailer(sourcefile, destfile, sourcewidth, sourceheight, fps, width, bitrate, threads, outputlenght, sourceduration, hasaudio, analyzerthreshold):
+	print("sourceduration: "+str(sourceduration)+", outputlenght: "+str(outputlenght))
+	logger("generating scene analyzer autotrailer...")
+	if sourceduration > 0 and outputlenght < sourceduration:
+		slices=scene_analyzer(sourcefile,outputlenght,sourceduration,analyzerthreshold)
+
+		height=calculate_height(width,sourcewidth,sourceheight)
+		keep_first_pass_log=False
+		ffmpeg_write_vo(sourcefile,slices,destfile,fps,width,height,bitrate,threads,keep_first_pass_log,hasaudio)
+		print("trailer generated, quitting...")
+		logger("trailer generated, quitting...")
+	else:
+		print("sourcefile too short, aborting...")
+		logger("sourcefile too short, aborting...")
+
+
 #################### BEGIN #########################
 
 #### Parse arguments and load state eventually
@@ -1174,14 +1230,26 @@ else:
 			outputlenght=0
 		else:
 			outputlenght=args.outputlenght
+		if not args.sceneanalyzer:
+			sceneanalyzer=False
+		else:
+			sceneanalyzer=args.sceneanalyzer
+		if not args.analyzerthreshold:
+			analyzerthreshold=float(0.4)
+		else:
+			analyzerthreshold=args.analyzerthreshold
 
 	if args.autotrailer:
-		if outputlenght > 0 and nslices > 0:
+		if outputlenght > 0 and sceneanalyzer:
+			logger("calling autotrailer with scene analyzer")
+			generate_sceneanalyzer_autotrailer(sourcefile, destfile, sourcewidth, sourceheight, fps, width, bitrate, threads, outputlenght, sourceduration, hasaudio, analyzerthreshold)
+			sys.exit()
+		elif outputlenght > 0 and nslices > 0:
 			logger("calling autotrailer")
 			generate_autotrailer(sourcefile, destfile, sourcewidth, sourceheight, fps, width, bitrate, threads, nslices, outputlenght, sourceduration, hasaudio)
 			sys.exit()
 		else:
-			print("When using -a (autotrailer) you must specify at least the number of slices (-n) and the target video duration (-l). Quitting...")
+			print("When using -a (autotrailer) you must specify at least the number of slices (-n) or scene analyzer (-z) and the target video duration (-l). Quitting...")
 			logger("Quitting video2trailer")
 			sys.exit()
 
@@ -1210,7 +1278,7 @@ try:
 
 		print("#",end="",flush=True)
 		choice=getchar()
-		
+
 		if any(q in choice for q in ["1","O","o"]):
 			xdg_open(sourcefile)
 		elif any(q in choice for q in ["2","F","f"]):
