@@ -1108,14 +1108,14 @@ def scene_analyzer(sourcefile,outputlenght,sourceduration,analyzerthreshold):
     ffmpeg_command="ffmpeg -nostdin -i \""+sourcefile+"\" -filter:v \"select='gt(scene,"+str(analyzerthreshold)+")',showinfo\" -f null - 2>\""+sourcefile+".sceneanalyzer\""
     logger("Running sceneanalyzer with command:"+ffmpeg_command)
     print("Analyzing sourcefile")
-    print("DEBUG: Running sceneanalyzer with command:"+ffmpeg_command)
+    #print("DEBUG: Running sceneanalyzer with command:"+ffmpeg_command)
 
     os.system(ffmpeg_command)
-    print("DEBUG: reading scenes")
+    #print("DEBUG: reading scenes")
 
     print("Parsing scenes")
     scene_parser="grep showinfo \""+sourcefile+".sceneanalyzer\" | grep pts_time:[0-9.]* -o | grep '[0-9]*\.[0-9]*' |cut -d \":\" -f 2 > \""+sourcefile+".scenes\""
-    print("DEBUG: Running scene parser with command:"+scene_parser)
+    #print("DEBUG: Running scene parser with command:"+scene_parser)
     os.system(scene_parser)
 
     scenes=[]
@@ -1130,16 +1130,35 @@ def scene_analyzer(sourcefile,outputlenght,sourceduration,analyzerthreshold):
     os.remove(sourcefile+".scenes")
 
     slice_duration=float(outputlenght/len(scenes))
-    print("DEBUG: slice duration: "+str(slice_duration))
-    logger("DEBUG: slice duration: "+str(slice_duration))
+    #print("DEBUG: slice duration: "+str(slice_duration))
+    logger("slice duration: "+str(slice_duration))
 
     slices=[]
     for i in range(len(scenes)):
-        if (scenes[i]+slice_duration < sourceduration):
-            slices.append([scenes[i],(scenes[i]+slice_duration)])
-        else:
-            slices.append([scenes[i],(sourceduration)])
-        logger("calculated slices: "+str(slices[i]))
+# this initial implementation added the slice duration to the start of the detected scene
+#        if (scenes[i]+slice_duration < sourceduration):
+#            slices.append([scenes[i],(scenes[i]+slice_duration)])
+#        else:
+#            slices.append([scenes[i],(sourceduration)])
+# the latest implementation places the start of the slice almost at halfway between the currently selected and the following slice
+        if i==(len(scenes)-1):
+			#try to start the last slice at 30% of the way between the beginning of th elast scene and the end of the clip
+			#unless it goes beyond the end of the clip when the outcome is summed with the slice duration
+			#otherwise fall back to the safer halfway algorithm
+            if (scenes[i]+((sourceduration-scenes[i]*30)/100)+slice_duration) < sourceduration:
+                logger("Last slice at 30%")
+                slices.append([(scenes[i]+((sourceduration-scenes[i]*30)/100)),(scenes[i]+((sourceduration-scenes[i]*30)/100)+slice_duration)])
+            else:
+				#print("DEBUG: scenes="+str(len(scenes))+", i="+str(i))
+                halfway_value=(sourceduration-scenes[i])/2-(slice_duration/2)
+                #print("DEBUG: scenes+1="+str(scenes[i+1])+", scenes="+str(scenes[i])+", halfway_value="+str(halfway_value))
+                slices.append([scenes[i]+halfway_value,scenes[i]+halfway_value+slice_duration])
+        elif i<(len(scenes)-1):
+            #print("DEBUG: scenes="+str(len(scenes))+", i="+str(i))
+            halfway_value=(scenes[i+1]-scenes[i])/2-(slice_duration/2)
+            #print("DEBUG: scenes+1="+str(scenes[i+1])+", scenes="+str(scenes[i])+", halfway_value="+str(halfway_value))
+            slices.append([scenes[i]+halfway_value,scenes[i]+halfway_value+slice_duration])
+    logger("calculated slices: "+str(slices))
     return slices
 
 def generate_sceneanalyzer_autotrailer(sourcefile, destfile, sourcewidth, sourceheight, fps, width, bitrate, threads, outputlenght, sourceduration, hasaudio, analyzerthreshold):
