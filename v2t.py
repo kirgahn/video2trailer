@@ -20,6 +20,7 @@ parser.add_argument("-l", "--outputlenght", help="target lenght/duration of the 
 parser.add_argument("-n", "--nslices", help="target number of slices of the output video - only used in conjuction with -a", type=int )
 parser.add_argument("-z", "--sceneanalyzer", default=0, help="use a scene detection analyser to automatically detect the number and timestamps of the scenes. 1=ffmpeg default scene analyzer, 2=ffmpeg lavfi scdet (requires ffmpeg5.0+), 3=pySceneDetect (requires pySceneDetect). Used in conjunction with -a, ignores -n", type=int )
 parser.add_argument("-zt", "--analyzerthreshold", help="optionally specify a threshold for the scene analyzer, ranging from 0.1 to 1 for the scene analyzer (-z) or 1-100 for the scdet scene analyzer (-zd). The number of scenes found increases with smaller values. defaults are 0.4 for the scene analyzer and 10 for scdet", type=float )
+parser.add_argument("-zd", "--analyzerdoublescenes", default=False, help="generate two slices intead of one for each detected scene at different positions within the detected scene itself", action="store_true" )
 parser.add_argument("-zs", "--analyzeskipahead", default="00:00:00", help="optionally specify a time value (in HH:MM:SS format) to shift the start of the stream analysis ahead. This is typically used to avoid the initial fluff - such as a title screen - from the scene analysis, since it can affect the outcome", type=str )
 parser.add_argument("-ze", "--analyzetrimend", help="optionally specify a time value (in HH:MM:SS format) to shift the end of the stream analysis backwards. This is typically used to avoid the final fluff - such as a movie credits - from the scene analysis, since it can affect the outcome", type=str )
 parser.add_argument("-d", "--destfile", help="Destination video file, if unspecified append \"_trailer.webm\" to source filename", type=str)
@@ -1117,7 +1118,7 @@ def generate_autotrailer(sourcefile, destfile, sourcewidth, sourceheight, fps, w
         print("sourcefile too short, aborting...")
         logger("sourcefile too short, aborting...")
 
-def scene_analyzer(sourcefile,outputlenght,sourceduration,analyzerthreshold,analyzeskipahead,analyzetrimend,sceneanalyzer):
+def scene_analyzer(sourcefile,outputlenght,sourceduration,analyzerthreshold,analyzeskipahead,analyzetrimend,sceneanalyzer,analyzerdoublescenes):
     if sceneanalyzer == 1:
         #ffmpeg gt scene detect
         sourceduration_skipahead=float(sourceduration)-float(convert_to_seconds(analyzeskipahead))
@@ -1173,19 +1174,37 @@ def scene_analyzer(sourcefile,outputlenght,sourceduration,analyzerthreshold,anal
         os.remove(sourcefile+".scenes")
 
     slice_duration=float(outputlenght/len(scenes))
+    if analyzerdoublescenes:
+        slice_duration=slice_duration/2
     #print("DEBUG: slice duration: "+str(slice_duration))
     logger("slice duration: "+str(slice_duration))
 
     slices=[]
+    #slice_start_percent= at wich percent between the current and the next detected scene
+    #should the slice start
+    slice_start_percentage=10
+    slice_mid_percentage=30
     for i in range(len(scenes)):
         if sceneanalyzer == 3:
             if i==(len(scenes)-1):
-                halfway_value=(sourceduration-scenes[i])/2-(slice_duration/2)
-                slices.append([scenes[i]+halfway_value,scenes[i]+halfway_value+slice_duration])
+                #halfway_value=(sourceduration-scenes[i])/2-(slice_duration/2)
+                #slices.append([scenes[i]+halfway_value,scenes[i]+halfway_value+slice_duration])
+                if analyzerdoublescenes:
+                    start_value=(sourceduration-scenes[i])/100*slice_start_percentage
+                    slices.append([scenes[i]+start_value,scenes[i]+start_value+slice_duration])
+
+                start_value=(sourceduration-scenes[i])/100*slice_mid_percentage
+                slices.append([scenes[i]+start_value,scenes[i]+start_value+slice_duration])
             elif i<(len(scenes)-1):
-                halfway_value=(scenes[i+1]-scenes[i])/2-(slice_duration/2)
+                #halfway_value=(scenes[i+1]-scenes[i])/2-(slice_duration/2)
                 #print("DEBUG: scenes+1="+str(scenes[i+1])+", scenes="+str(scenes[i])+", halfway_value="+str(halfway_value))
-                slices.append([scenes[i]+halfway_value,scenes[i]+halfway_value+slice_duration])
+                #slices.append([scenes[i]+halfway_value,scenes[i]+halfway_value+slice_duration])
+                if analyzerdoublescenes:
+                    start_value=(scenes[i+1]-scenes[i])/100*slice_start_percentage
+                    slices.append([scenes[i]+start_value,scenes[i]+start_value+slice_duration])
+
+                start_value=(scenes[i+1]-scenes[i])/100*slice_mid_percentage
+                slices.append([scenes[i]+start_value,scenes[i]+start_value+slice_duration])
         else:
             # this initial implementation added the slice duration to the start of the detected scene
             #        if (scenes[i]+slice_duration < sourceduration):
@@ -1197,30 +1216,40 @@ def scene_analyzer(sourcefile,outputlenght,sourceduration,analyzerthreshold,anal
                 #try to start the last slice at 30% of the way between the beginning of the last scene and the end of the clip
                 #unless it goes beyond the end of the clip when the outcome is summed with the slice duration
                 #otherwise fall back to the safer halfway algorithm
-                if (scenes[i]+((sourceduration-float(convert_to_seconds(analyzetrimend))-scenes[i])*30/100)+slice_duration) < (sourceduration-float(convert_to_seconds(analyzetrimend))):
-                    #print("DEBUG 30%: scenes[i]="+str(scenes[i])+", start at="+str((scenes[i]+((sourceduration-scenes[i])*30/100))))
-                    #print("DEBUG 30%: scenes[i-1] would be ="+str(scenes[i-1]))
-                    logger("Last slice at 30% ="+str((scenes[i]+((sourceduration-float(convert_to_seconds(analyzetrimend))-scenes[i])*30/100))))
-                    slices.append([(scenes[i]+((sourceduration-float(convert_to_seconds(analyzetrimend))-scenes[i])*30/100)),(scenes[i]+((sourceduration-float(convert_to_seconds(analyzetrimend))-scenes[i])*30/100)+slice_duration)])
-                else:
-                    #print("DEBUG: scenes="+str(len(scenes))+", i="+str(i))
-                    halfway_value=(sourceduration-float(convert_to_seconds(analyzetrimend))-scenes[i])/2-(slice_duration/2)
-                    #print("DEBUG: scenes+1="+str(scenes[i+1])+", scenes="+str(scenes[i])+", halfway_value="+str(halfway_value))
-                    slices.append([scenes[i]+halfway_value,scenes[i]+halfway_value+slice_duration])
+                #if (scenes[i]+((sourceduration-float(convert_to_seconds(analyzetrimend))-scenes[i])*30/100)+slice_duration) < (sourceduration-float(convert_to_seconds(analyzetrimend))):
+                #    #print("DEBUG 30%: scenes[i]="+str(scenes[i])+", start at="+str((scenes[i]+((sourceduration-scenes[i])*30/100))))
+                #    #print("DEBUG 30%: scenes[i-1] would be ="+str(scenes[i-1]))
+                #    logger("Last slice at 30% ="+str((scenes[i]+((sourceduration-float(convert_to_seconds(analyzetrimend))-scenes[i])*30/100))))
+                #    slices.append([(scenes[i]+((sourceduration-float(convert_to_seconds(analyzetrimend))-scenes[i])*30/100)),(scenes[i]+((sourceduration-float(convert_to_seconds(analyzetrimend))-scenes[i])*30/100)+slice_duration)])
+                #else:
+                #    #print("DEBUG: scenes="+str(len(scenes))+", i="+str(i))
+                #    halfway_value=(sourceduration-float(convert_to_seconds(analyzetrimend))-scenes[i])/2-(slice_duration/2)
+                #    #print("DEBUG: scenes+1="+str(scenes[i+1])+", scenes="+str(scenes[i])+", halfway_value="+str(halfway_value))
+                #    slices.append([scenes[i]+halfway_value,scenes[i]+halfway_value+slice_duration])
+                if analyzerdoublescenes:
+                    start_value=(sourceduration-float(convert_to_seconds(analyzetrimend))-scenes[i])/100*slice_start_percentage
+                    slices.append([(scenes[i]+start_value),(scenes[i]+start_value+slice_duration)])
+                start_value=(sourceduration-float(convert_to_seconds(analyzetrimend))-scenes[i])/100*slice_mid_percentage
+                slices.append([(scenes[i]+start_value),(scenes[i]+start_value+slice_duration)])
             elif i<(len(scenes)-1):
                 #print("DEBUG: scenes="+str(len(scenes))+", i="+str(i))
-                halfway_value=(scenes[i+1]-scenes[i])/2-(slice_duration/2)
+                #halfway_value=(scenes[i+1]-scenes[i])/2-(slice_duration/2)
                 #print("DEBUG: scenes+1="+str(scenes[i+1])+", scenes="+str(scenes[i])+", halfway_value="+str(halfway_value))
-                slices.append([scenes[i]+halfway_value,scenes[i]+halfway_value+slice_duration])
+                #slices.append([scenes[i]+halfway_value,scenes[i]+halfway_value+slice_duration])
+                if analyzerdoublescenes:
+                    start_value=(scenes[i+1]-scenes[i])/100*slice_start_percentage
+                    slices.append([scenes[i]+start_value,scenes[i]+start_value+slice_duration])
+                start_value=(scenes[i+1]-scenes[i])/100*slice_mid_percentage
+                slices.append([scenes[i]+start_value,scenes[i]+start_value+slice_duration])
     logger("calculated slices: "+str(slices))
     return slices
 
-def generate_sceneanalyzer_autotrailer(sourcefile, destfile, sourcewidth, sourceheight, fps, width, bitrate, threads, outputlenght, sourceduration, hasaudio, analyzerthreshold, analyzeskipahead, analyzetrimend,sceneanalyzer):
+def generate_sceneanalyzer_autotrailer(sourcefile, destfile, sourcewidth, sourceheight, fps, width, bitrate, threads, outputlenght, sourceduration, hasaudio, analyzerthreshold, analyzeskipahead, analyzetrimend,sceneanalyzer,analyzerdoublescenes):
     logger("generating scene analyzer autotrailer...")
     sourceduration_skipahead=float(sourceduration)-float(convert_to_seconds(analyzeskipahead))
     logger("sourceduration: "+str(sourceduration)+", considering skipahead: "+str(sourceduration_skipahead)+", outputlenght: "+str(outputlenght))
     if sourceduration_skipahead > 0 and outputlenght < sourceduration_skipahead:
-        slices=scene_analyzer(sourcefile,outputlenght,sourceduration,analyzerthreshold,analyzeskipahead,analyzetrimend,sceneanalyzer)
+        slices=scene_analyzer(sourcefile,outputlenght,sourceduration,analyzerthreshold,analyzeskipahead,analyzetrimend,sceneanalyzer,analyzerdoublescenes)
 
         height=calculate_height(width,sourcewidth,sourceheight)
         keep_first_pass_log=False
@@ -1328,11 +1357,14 @@ else:
                 analyzetrimend="00:00:00"
         else:
             analyzetrimend=args.analyzetrimend
-
+        if not args.analyzerdoublescenes:
+            analyzerdoublescenes=False
+        else:
+            analyzerdoublescenes=True
     if args.autotrailer:
         if outputlenght > 0 and sceneanalyzer > 0:
             logger("calling autotrailer with scene analyzer")
-            generate_sceneanalyzer_autotrailer(sourcefile, destfile, sourcewidth, sourceheight, fps, width, bitrate, threads, outputlenght, sourceduration, hasaudio, analyzerthreshold,analyzeskipahead,analyzetrimend,sceneanalyzer)
+            generate_sceneanalyzer_autotrailer(sourcefile, destfile, sourcewidth, sourceheight, fps, width, bitrate, threads, outputlenght, sourceduration, hasaudio, analyzerthreshold,analyzeskipahead,analyzetrimend,sceneanalyzer,analyzerdoublescenes)
             sys.exit()
         elif outputlenght > 0 and nslices > 0:
             logger("calling autotrailer")
