@@ -28,7 +28,7 @@ parser.add_argument("-f", "--fps", help="Output videofile frames per second, if 
 parser.add_argument("-w", "--width", help="Resolution width of the output file in pixels, assume source width if empty", type=int)
 parser.add_argument("-b", "--bitrate", help="Output videofile bitrate in \"x.x\" format, assumes \"0.6M\" if empty", type=float)
 parser.add_argument("-t", "--threads", help="Number of threads to use when encoding", type=int)
-parser.add_argument("-s", "--targetsize", help="CURRENTLY UNUSED - Target size in MB for the final compressed video", type=int)
+#parser.add_argument("-s", "--targetsize", help="CURRENTLY UNUSED - Target size in MB for the final compressed video", type=int)
 
 args = parser.parse_args()
 
@@ -404,8 +404,17 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
             ffmpeg_command=ffmpeg_command + "concat=n=" + str(len(slices)) + ":v=1:a=1[out]\""
         else:
             ffmpeg_command=ffmpeg_command + "concat=n=" + str(len(slices)) + ":v=1[out]\""
-        ffmpeg_command_pass1=ffmpeg_command + " -an -pass 1 -map \"[out]\" -f webm " + "/dev/null"
-        ffmpeg_command_pass2=ffmpeg_command + " -pass 2 -map \"[out]\" " + "-f webm \'" + destfile + "\'"
+
+        #Deprecating the double pass. Two-passess are useful when you're trying to keep
+        #the size of the resulting file under control, but at this time this is not the
+        #focus of v2t. Size targeting is only partially implemented right now, and it doesn't even work
+        #ergo: deprecating the two passess related code. Will keep it in case it will turn
+        #out useful in the future
+
+        #ffmpeg_command_pass1=ffmpeg_command + " -an -pass 1 -map \"[out]\" -f webm " + "/dev/null"
+        #ffmpeg_command_pass2=ffmpeg_command + " -pass 2 -map \"[out]\" " + "-f webm \'" + destfile + "\'"
+
+        ffmpeg_command=ffmpeg_command + " -map \"[out]\" " + "-f webm \'" + destfile + "\'"
 
         logger("Encoding to: " + destfile)
         print("Encoding to: " + destfile)
@@ -414,20 +423,22 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
         #### Skip first pass encoding if ffmpeg's first pass log is present. This should only happen when
         #### we're encoding both full and variable quality videos. This could create some race conditions
         #### and who knows what will happen if ffmpeg makes a second pass with a corrupted first pass log!!
-        if not os.path.isfile("ffmpeg2pass-0.log"):
-            logger("Encoding to " + destfile + ", running first pass with command: " + ffmpeg_command_pass1)
-            os.system(ffmpeg_command_pass1)
-        else:
-            logger("previous first pass log file found (ffmpeg2pass-0.log), skipping first pass encoding")
+        #if not os.path.isfile("ffmpeg2pass-0.log"):
+        #    logger("Encoding to " + destfile + ", running first pass with command: " + ffmpeg_command_pass1)
+        #    os.system(ffmpeg_command_pass1)
+        #else:
+        #    logger("previous first pass log file found (ffmpeg2pass-0.log), skipping first pass encoding")
 
-        logger("Encoding to " + destfile + ", running second pass with command: " + ffmpeg_command_pass2)
-        os.system(ffmpeg_command_pass2)
+        #logger("Encoding to " + destfile + ", running second pass with command: " + ffmpeg_command_pass2)
+        #os.system(ffmpeg_command_pass2)
 
-        if not keep_first_pass_log:
-            logger("Removing first pass log ffmpeg2pass-0.log")
-            os.remove("ffmpeg2pass-0.log")
-        else:
-            logger("keeping first pass log ffmpeg2pass-0.log for further encoding")
+        os.system(ffmpeg_command)
+
+        #if not keep_first_pass_log:
+        #    logger("Removing first pass log ffmpeg2pass-0.log")
+        #    os.remove("ffmpeg2pass-0.log")
+        #else:
+        #    logger("keeping first pass log ffmpeg2pass-0.log for further encoding")
 
         end_time=time.time()
         elapsed_time=convert_to_minutes(end_time-start_time)
@@ -1257,10 +1268,10 @@ else:
             threads=3
         else:
             threads=args.threads
-        if not args.targetsize:
-            target_size=0
-        else:
-            target_size=args.targetsize
+        #if not args.targetsize:
+        #    target_size=0
+        #else:
+        #    target_size=args.targetsize
         if not args.nslices:
             nslices=0
         else:
