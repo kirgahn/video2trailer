@@ -433,6 +433,7 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
         #logger("Encoding to " + destfile + ", running second pass with command: " + ffmpeg_command_pass2)
         #os.system(ffmpeg_command_pass2)
 
+        logger("Encoding to " + destfile + " with command: " + ffmpeg_command)
         os.system(ffmpeg_command)
 
         #if not keep_first_pass_log:
