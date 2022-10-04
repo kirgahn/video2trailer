@@ -589,6 +589,7 @@ def custom_slice(sourcefile, sourcefps, sourcewidth, sourcebitrate, threads, has
 #                        break
 
 def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,hasaudio):
+    #logger("DEBUG: write_all_slices - hasaudio: "+str(hasaudio))
     try:
         #### encoder = either libx264 or libvpx
         encoder="libvpx"
@@ -612,7 +613,9 @@ def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheig
 
             if hasaudio:
                 ffmpeg_command=ffmpeg_command + "[0:a]atrim="+ str(ss) + ":" + str(se) + ",asetpts=PTS-STARTPTS[a" + str(i) + "]; "
-            ffmpeg_command=ffmpeg_command + "[v" + str(i) + "][a" + str(i) + "]"
+                ffmpeg_command=ffmpeg_command + "[v" + str(i) + "][a" + str(i) + "]"
+            else:
+                ffmpeg_command=ffmpeg_command + "[v" + str(i) + "]"
 
             if hasaudio:
                 ffmpeg_command=ffmpeg_command + "concat=n=1:v=1:a=1[out]\" "
