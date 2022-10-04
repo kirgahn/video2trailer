@@ -588,7 +588,7 @@ def custom_slice(sourcefile, sourcefps, sourcewidth, sourcebitrate, threads, has
 #                    if keep_loop == "n" or keep_loop == "N":
 #                        break
 
-def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,hasaudio):
+def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,hasaudio):
     try:
         #### encoder = either libx264 or libvpx
         encoder="libvpx"
@@ -602,8 +602,7 @@ def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheig
             (ss,se)=slices[i]
 
             #### with libvpx options
-            ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -r " + str(sourcefps) + " -codec:v " + encoder + "  -quality good -cpu-used 0  -b:v " + str(sourcebitrate) + "k -qmin 10 -qmax 42 -s " + str(sourcewidth) + "x" + str(sourceheight) + " -c:a libvorbis -q 0 -threads " + str(threads) + " -filter_complex \""
-
+            ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -r " + str(sourcefps) + " -codec:v " + encoder + "  -quality good -cpu-used 0  -b:v " + str(sourcebitrate) + "k -qmin 10 -qmax 42 -s " + str(sourcewidth) + "x" + str(sourceheight) + " -c:a libvorbis "
             if hasaudio:
                 ffmpeg_command=ffmpeg_command + " -c:a libvorbis "
 
@@ -956,7 +955,8 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
             print("1) (a)dd slice")
             #print("2) (i)nsert slice")
             #print("3) (c)hange slice")
-            print("2) (r)emove slice")
+            #print("2) (r)emove slice")
+            print("2) (r)ender all slices individually")
             print("3) (d)elete all slices")
             print("4) (e)dit all slices")
             print("5) (s)lice preview")
@@ -984,10 +984,19 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
                 slices = add_slice(slices,sourceduration)
             elif any(q in slices_choice for q in ["2","R","r"]):
                 if slices:
-                    slices = remove_slice(slices)
+                    path="./slices/"
+                    check_path(path)
+                    height=calculate_height(width,sourcewidth,sourceheight)
+                    targetfile=path+destfile.rsplit( "." ,1 )[0]
+                    write_all_slices(sourcefile,slices,targetfile,fps,width,height,bitrate,threads,hasaudio)
                 else:
                     print("No defined slice! (Press any key to continue)")
                     getchar()
+                #if slices:
+                #    slices = remove_slice(slices)
+                #else:
+                #    print("No defined slice! (Press any key to continue)")
+                #    getchar()
             elif any(q in slices_choice for q in ["3","D","d"]):
                 if slices:
                     print("Confirm operation (y/n)")
