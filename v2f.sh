@@ -117,15 +117,16 @@ rm -rf $tmpdir
 
 	if [ "$quiet" != "true"  ];
 	then
-		echo "done! output file is " "$1".jpeg
-		echo "Press (q) to quit, (v) to view the file"
-		read -n 1 -s viewfile
-		
-		if [ "$viewfile" == "v" ];
-			then
-				#feh -F "$1".jpeg
-				xdg-open "$1".jpeg &>/dev/null
-		fi
+		#echo "done! output file is " "$1".jpeg
+		#echo "Press (q) to quit, (v) to view the file"
+		#read -n 1 -s viewfile
+		#
+		#if [ "$viewfile" == "v" ];
+		#	then
+		#		#feh -F "$1".jpeg
+		#		xdg-open "$1".jpeg &>/dev/null
+		#fi
+		xdg-open "$1".jpeg &>/dev/null
 	fi
 
 exit 1

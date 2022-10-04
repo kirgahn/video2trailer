@@ -1274,7 +1274,7 @@ def generate_sceneanalyzer_autotrailer(sourcefile, destfile, sourcewidth, source
 title = "|| video2trailer ||"
 #player="xdg-open"
 #player="vlc"
-player="mplayer -loop 0 -osd-fractions 1 -osdlevel 3"
+player="mplayer -loop 0 -osd-fractions 1 -osdlevel 3 -really-quiet"
 editor="vim"
 
 write_full_quality=True
