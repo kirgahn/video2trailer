@@ -84,6 +84,20 @@ def time_input():
     print("\n")
     return(char_buffer)
 
+def get_screen_width():
+    cmd = ['xrandr']
+    cmd2 = ['grep', '*']
+    cmd3 = ['head', '-1']
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    p2 = subprocess.Popen(cmd2, stdin=p.stdout, stdout=subprocess.PIPE)
+    p3 = subprocess.Popen(cmd3, stdin=p2.stdout, stdout=subprocess.PIPE)
+    p.stdout.close()
+    resolution_string, junk = p3.communicate()
+    resolution = resolution_string.split()[0]
+    width, height = resolution.decode("utf-8").split('x')
+
+    return(width)
+
 def logger(logmessage):
     logfile="./v2t.log"
     now=datetime.now()
@@ -127,8 +141,8 @@ def video2filmstrip(sourcefile):
 def xdg_open(sourcefile):
     if sourcefile:
         try:
-            logger("Playing media file with command: "+ player + " \'" + sourcefile + "\' &> /dev/null &")
-            os.system(player + " \'" + sourcefile + "\' &> /dev/null &")
+            logger("Playing media file with command: "+ player + " \'" + sourcefile + "\' "+ player_extra_opts)
+            os.system(player + " \'" + sourcefile + "\' "+ player_extra_opts)
         except OSError as err:
             logger("Error: {0}".format(err))
             print("OS error: {0}".format(err))
@@ -1286,7 +1300,9 @@ def generate_sceneanalyzer_autotrailer(sourcefile, destfile, sourcewidth, source
 title = "|| video2trailer ||"
 #player="xdg-open"
 #player="vlc"
-player="mplayer -loop 0 -osd-fractions 1 -osdlevel 3 -really-quiet"
+player_width=round(int(get_screen_width())/2)
+player="mplayer -xy " + str(player_width) + " -geometry 100%:0% -zoom -osd-fractions 1 -osdlevel 3 -really-quiet"
+player_extra_opts="-loop 0 &>/dev/null &"
 editor="vim"
 
 write_full_quality=True
