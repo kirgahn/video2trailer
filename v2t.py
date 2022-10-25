@@ -661,13 +661,13 @@ def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheig
 def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
     #### Encoders
     #### VP8:
-    encoder="libvpx" ### either x264/mp4 or libvpx/webm
-    audio_encoder="libvorbis"
-    file_ext="webm"
+    #encoder="libvpx" ### either x264/mp4 or libvpx/webm
+    #audio_encoder="libvorbis"
+    #file_ext="webm"
     #### H264
-    #encoder="libx264" ### either x264/mp4 or libvpx/webm
-    #audio_encoder="aac"
-    #file_ext="mp4"
+    encoder="libx264"
+    audio_encoder="aac"
+    file_ext="mp4"
 
     preview_file=destfile + "." + file_ext
 
@@ -1038,7 +1038,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
                         subslice.append(slices[which_slice])
                         tempfile=destfile+str(random.randint(0,1024))+".webm"
 
-                        write_preview(sourcefile,subslice,tempfile,20,180,320,"0.2M",threads)
+                        write_preview(sourcefile,subslice,tempfile,24,180,320,"0.8M",threads)
                     except (ValueError, OSError) as err:
                         logger("Error: {0}".format(err))
                         print("Error: {0}".format(err) + " (Press any key to continue)")
@@ -1053,7 +1053,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
                         path="./preview/"
                         check_path(path)
                         tempfile=path+destfile+str(random.randint(0,1024))+ext
-                        write_preview(sourcefile,slices,tempfile,20,180,320,"0.2M",threads)
+                        write_preview(sourcefile,slices,tempfile,24,180,320,"0.8M",threads)
                     except (ValueError, OSError) as err:
                         logger("Error: {0}".format(err))
                         print("Error: {0}".format(err) + " (Press any key to continue)")
