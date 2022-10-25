@@ -99,7 +99,7 @@ def get_screen_width():
         width, height = resolution.decode("utf-8").split('x')
     except (BaseException) as err:
             logger("Error: {0}".format(err))
-            print("OS error: {0}".format(err))
+            #print("OS error: {0}".format(err))
             width = 1
 
     return(width)
