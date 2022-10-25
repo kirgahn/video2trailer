@@ -1300,8 +1300,13 @@ def generate_sceneanalyzer_autotrailer(sourcefile, destfile, sourcewidth, source
 title = "|| video2trailer ||"
 #player="xdg-open"
 #player="vlc"
-player_width=round(int(get_screen_width())/2)
-player="mplayer -xy " + str(player_width) + " -geometry 100%:0% -zoom -osd-fractions 1 -osdlevel 3 -really-quiet"
+try:
+    player_width=round(int(get_screen_width())/2)
+    player="mplayer -xy " + str(player_width) + " -geometry 100%:0% -zoom -osd-fractions 1 -osdlevel 3 -really-quiet"
+except (ValueError, OSError) as err:
+    logger("Error: {0}".format(err) )
+    player="mplayer -zoom -osd-fractions 1 -osdlevel 3 -really-quiet"
+    
 player_extra_opts="-loop 0 &>/dev/null &"
 editor="vim"
 
