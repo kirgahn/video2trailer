@@ -402,12 +402,25 @@ def remove_slice(slices):
 def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,keep_first_pass_log,hasaudio):
     try:
         #### encoder = either libx264 or libvpx
-        encoder="libvpx"
-        vo_slices = []
-        quality_opts=" -quality good -cpu-used 0 -qmin 10 -qmax 42 -crf 10 -b:v " + str(sourcebitrate) + "k"
+        if destfile.endswith('.webm'):
+            quality_opts=" -quality good -cpu-used 0 -qmin 10 -qmax 42 -crf 10 -b:v " + str(sourcebitrate) + "k"
+            encoder="libvpx"
+            audiolib="libvorbis"
+            ext="webm"
+        elif destfile.endswith('.mp4'):
+            encoder="libx264"
+            quality_opts=" -preset slow -crf 22 -movflags +faststart -b:v " + str(sourcebitrate) + "k"
+            audiolib="aac"
+            ext="mp4"
+        else:
+            raise SystemExit("Unknown extension for file \"" + destfile + "\". Quitting now." )
+
+        print("DEBUG: Destfile: "+ destfile +", ext: " + ext)
 
         #### with libvpx options
-        ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -r " + str(sourcefps) + " -codec:v " + encoder + quality_opts + " -s " + str(sourcewidth) + "x" + str(sourceheight) + " -c:a libvorbis -q 0 -threads " + str(threads) + " -filter_complex \""
+        ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -r " + str(sourcefps) + " -codec:v " + encoder + quality_opts + " -s " + str(sourcewidth) + "x" + str(sourceheight) + " -c:a " + audiolib + " -q 0 -threads " + str(threads) + " -filter_complex \""
+        
+        vo_slices = []
 
         for i in range(len(slices)):
             (ss,se)=slices[i]
@@ -435,7 +448,7 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
         #ffmpeg_command_pass1=ffmpeg_command + " -an -pass 1 -map \"[out]\" -f webm " + "/dev/null"
         #ffmpeg_command_pass2=ffmpeg_command + " -pass 2 -map \"[out]\" " + "-f webm \'" + destfile + "\'"
 
-        ffmpeg_command=ffmpeg_command + " -map \"[out]\" " + "-f webm \'" + destfile + "\'"
+        ffmpeg_command=ffmpeg_command + " -map \"[out]\" " + "-f "+ ext +" \'" + destfile + "\'"
 
         logger("Encoding to: " + destfile)
         print("Encoding to: " + destfile)
@@ -473,6 +486,7 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
         getchar()
 
 def custom_slice(sourcefile, sourcefps, sourcewidth, sourcebitrate, threads, hasaudio):
+                ### Needs webm/mp4 rework here!!!!
                 #### custom slice is here
                 custom_slice = []
                 custom_slice_quality=""
@@ -1042,9 +1056,9 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
                         which_slice=int(input("#"))
                         subslice=[]
                         subslice.append(slices[which_slice])
-                        tempfile=destfile+str(random.randint(0,1024))+".webm"
+                        tempfile=destfile+str(random.randint(0,1024))
 
-                        write_preview(sourcefile,subslice,tempfile,24,180,320,"0.8M",threads)
+                        write_preview(sourcefile,subslice,tempfile,24,360,640,"1.6M",threads)
                     except (ValueError, OSError) as err:
                         logger("Error: {0}".format(err))
                         print("Error: {0}".format(err) + " (Press any key to continue)")
@@ -1055,11 +1069,11 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
             elif any(q in slices_choice for q in ["6","P","p"]):
                 if slices:
                     try:
-                        ext=".webm" #either .mp4 or .webm
+                        #ext=".webm" #either .mp4 or .webm
                         path="./preview/"
                         check_path(path)
-                        tempfile=path+destfile+str(random.randint(0,1024))+ext
-                        write_preview(sourcefile,slices,tempfile,24,180,320,"0.8M",threads)
+                        tempfile=path+destfile+str(random.randint(0,1024))
+                        write_preview(sourcefile,slices,tempfile,24,360,640,"1.6M",threads)
                     except (ValueError, OSError) as err:
                         logger("Error: {0}".format(err))
                         print("Error: {0}".format(err) + " (Press any key to continue)")
@@ -1072,7 +1086,11 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
                 custom_slice(sourcefile, sourcefps, sourcewidth, sourcebitrate, threads, hasaudio)
             elif any(q in slices_choice for q in ["8","W","w"]):
                 if slices:
-                    ext=".webm"
+                    if destfile.endswith('.mp4'):
+                        ext=".mp4"
+                    else:
+                        ext=".webm"
+
                     #### write the full quality webm
                     if write_full_quality:
                         path="./full/"
