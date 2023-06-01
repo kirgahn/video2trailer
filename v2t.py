@@ -948,8 +948,11 @@ def parse_ffprobe_info(sourcefile):
             codec_type=j['streams'][i]['codec_type']
             if codec_type=='audio':
                     hasaudio=True
+                    break
             else:
                     hasaudio=False
+            #DEBUG
+            logger("codec index="+str(i)+", codec type="+codec_type+", hasaudio="+str(hasaudio))
 
     logger("Parsed info:")
     logger("Resolution is: " + str(sourcewidth) + "x" + str(sourceheight))
