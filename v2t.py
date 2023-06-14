@@ -1060,8 +1060,8 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
                         subslice=[]
                         subslice.append(slices[which_slice])
                         tempfile=destfile+str(random.randint(0,1024))
-
-                        write_preview(sourcefile,subslice,tempfile,24,360,640,"1.6M",threads)
+                        preview_height=calculate_height(640,sourcewidth,sourceheight)
+                        write_preview(sourcefile,subslice,tempfile,24,preview_height,640,"1.6M",threads)
                     except (ValueError, OSError) as err:
                         logger("Error: {0}".format(err))
                         print("Error: {0}".format(err) + " (Press any key to continue)")
@@ -1076,7 +1076,8 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
                         path="./preview/"
                         check_path(path)
                         tempfile=path+destfile+str(random.randint(0,1024))
-                        write_preview(sourcefile,slices,tempfile,24,360,640,"1.6M",threads)
+                        preview_height=calculate_height(640,sourcewidth,sourceheight)
+                        write_preview(sourcefile,slices,tempfile,24,preview_height,640,"1.6M",threads)
                     except (ValueError, OSError) as err:
                         logger("Error: {0}".format(err))
                         print("Error: {0}".format(err) + " (Press any key to continue)")
