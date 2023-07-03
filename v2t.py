@@ -645,53 +645,34 @@ def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheig
 
         vo_slices = []
         logger("Encoding " + str(len(slices)) + " slices, each slice as a separate ouput file")
+
+        #### ffmpeg command building
+        ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -r " + str(sourcefps) + " -codec:v " + encoder + quality_opts + " -s " + str(sourcewidth) + "x" + str(sourceheight)
+
+        if hasaudio:
+            ffmpeg_command=ffmpeg_command + " -c:a " + audiolib
+        ffmpeg_command=ffmpeg_command + " -q 0 -threads " + str(threads) + " "
+        
         for i in range(len(slices)):
-            #outfile="\'" + destfile + "_" + str(i) + ".webm\'"
             outfile="\'" + basefilename + "_" + str(i) + "." + ext + "\'"
-
-            ###DEBUG
-            logger("outfile:" + outfile)
-
             (ss,se)=slices[i]
+            ffmpeg_command=ffmpeg_command + "-ss "+ str(ss) + " -to " + str(se) + " " + outfile + " "
 
-            #### ffmpeg command building
-            ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -r " + str(sourcefps) + " -codec:v " + encoder + quality_opts + " -s " + str(sourcewidth) + "x" + str(sourceheight) # + " -c:a " + audiolib + " -q 0 -threads " + str(threads) + " -filter_complex \""
-            #ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -r " + str(sourcefps) + " -codec:v " + encoder + "  -quality good -cpu-used 0  -b:v " + str(sourcebitrate) + "k -qmin 10 -qmax 42 -s " + str(sourcewidth) + "x" + str(sourceheight) + " -c:a libvorbis "
-            if hasaudio:
-                #ffmpeg_command=ffmpeg_command + " -c:a libvorbis "
-                ffmpeg_command=ffmpeg_command + " -c:a " + audiolib
+        try:
+            logger("Encoding multiple slices in path " + path + ", using ffmpeg command: " + ffmpeg_command)
+            print("Encoding multiple slices in path " + path)
+            subprocess.call(ffmpeg_command,shell=True)
 
-            ffmpeg_command=ffmpeg_command + " -q 0 -threads " + str(threads) + " -filter_complex \""
+        except OSError as err:
+            logger("Error: {0}".format(err))
+            print("Error: {0}".format(err) + " (Press any key to continue)")
+            getchar()
 
-            ffmpeg_command=ffmpeg_command + "[0:v]trim="+ str(ss) + ":" + str(se) + ",setpts=PTS-STARTPTS[v" + str(i) + "]; "
-
-            if hasaudio:
-                ffmpeg_command=ffmpeg_command + "[0:a]atrim="+ str(ss) + ":" + str(se) + ",asetpts=PTS-STARTPTS[a" + str(i) + "]; "
-                ffmpeg_command=ffmpeg_command + "[v" + str(i) + "][a" + str(i) + "]"
-            else:
-                ffmpeg_command=ffmpeg_command + "[v" + str(i) + "]"
-
-            if hasaudio:
-                ffmpeg_command=ffmpeg_command + "concat=n=1:v=1:a=1[out]\" "
-            else:
-                ffmpeg_command=ffmpeg_command + "concat=n=1:v=1[out]\" "
-
-            ffmpeg_command=ffmpeg_command + "-map \"[out]\" " + outfile
-
-            try:
-                logger("Encoding slice #" + str(i) + " with filename " + outfile + ", using ffmpeg command: " + ffmpeg_command)
-                print("Encoding slice #" + str(i) + " with filename: " + outfile)
-                subprocess.call(ffmpeg_command,shell=True)
-
-            except OSError as err:
-                logger("Error: {0}".format(err))
-                print("Error: {0}".format(err) + " (Press any key to continue)")
-                getchar()
-
-            end_time=time.time()
-            elapsed_time=convert_to_minutes(end_time-start_time)
-            logger("Encoding done, elapsed time with " + str(threads) + " threads is: " + elapsed_time)
-            print("Elapsed time: " + elapsed_time)
+        end_time=time.time()
+        elapsed_time=convert_to_minutes(end_time-start_time)
+        logger("Encoding done, elapsed time with " + str(threads) + " threads is: " + elapsed_time)
+        print("Elapsed time: " + elapsed_time)
+        getchar()
 
     except (ValueError, OSError) as err:
         logger("Error: {0}".format(err))
