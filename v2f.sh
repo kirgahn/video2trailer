@@ -29,7 +29,7 @@ fi
 ## time in secs. tell something about it  ##
 ############################################
 
-tot_frames=24
+tot_frames=36
 percentage=`echo 100/$tot_frames|bc`
 progress=0
 framelist=""
@@ -84,8 +84,8 @@ do
 	done;
 
 	framelist=$framelist"$tmpdir/_tmp$i.jpg "
-	convert $tmpdir/_tmp$i.jpg -fill black -font /usr/share/fonts/TTF/DejaVuSans.ttf -gravity Southwest -pointsize 14 -annotate +0+0 $frametimehours $tmpdir/_tmp$i.jpg
-	convert $tmpdir/_tmp$i.jpg -fill white -font /usr/share/fonts/TTF/DejaVuSans.ttf -gravity Southwest -pointsize 14 -annotate +1+1 $frametimehours $tmpdir/_tmp$i.jpg
+	convert $tmpdir/_tmp$i.jpg -fill black -gravity Southwest -pointsize 14 -annotate +0+0 $frametimehours $tmpdir/_tmp$i.jpg
+	convert $tmpdir/_tmp$i.jpg -fill white -gravity Southwest -pointsize 14 -annotate +1+1 $frametimehours $tmpdir/_tmp$i.jpg
 
 	if [ "$quiet" != "true"  ];
 	then
