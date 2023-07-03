@@ -625,23 +625,43 @@ def custom_slice(sourcefile, sourcefps, sourcewidth, sourcebitrate, threads, has
 def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,hasaudio):
     #logger("DEBUG: write_all_slices - hasaudio: "+str(hasaudio))
     try:
+        path="./slices/"
         #### encoder = either libx264 or libvpx
-        encoder="libvpx"
+        if destfile.endswith('.webm'):
+            quality_opts=" -quality good -cpu-used 0 -qmin 10 -qmax 42 -crf 10 -b:v " + str(sourcebitrate) + "k"
+            encoder="libvpx"
+            audiolib="libvorbis"
+            ext="webm"
+        elif destfile.endswith('.mp4'):
+            encoder="libx264"
+            quality_opts=" -preset slow -crf 22 -movflags +faststart -b:v " + str(sourcebitrate) + "k"
+            audiolib="aac"
+            ext="mp4"
+        else:
+            raise SystemExit("Unknown extension for file \"" + destfile + "\". Quitting now." )
         start_time=time.time()
+
+        basefilename=path+destfile.rsplit( "." ,1 )[0]
 
         vo_slices = []
         logger("Encoding " + str(len(slices)) + " slices, each slice as a separate ouput file")
         for i in range(len(slices)):
-            outfile="\'" + destfile + "_" + str(i) + ".webm\'"
+            #outfile="\'" + destfile + "_" + str(i) + ".webm\'"
+            outfile="\'" + basefilename + "_" + str(i) + "." + ext + "\'"
+
+            ###DEBUG
+            logger("outfile:" + outfile)
 
             (ss,se)=slices[i]
 
-            #### with libvpx options
-            ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -r " + str(sourcefps) + " -codec:v " + encoder + "  -quality good -cpu-used 0  -b:v " + str(sourcebitrate) + "k -qmin 10 -qmax 42 -s " + str(sourcewidth) + "x" + str(sourceheight) + " -c:a libvorbis "
+            #### ffmpeg command building
+            ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -r " + str(sourcefps) + " -codec:v " + encoder + quality_opts + " -s " + str(sourcewidth) + "x" + str(sourceheight) # + " -c:a " + audiolib + " -q 0 -threads " + str(threads) + " -filter_complex \""
+            #ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -r " + str(sourcefps) + " -codec:v " + encoder + "  -quality good -cpu-used 0  -b:v " + str(sourcebitrate) + "k -qmin 10 -qmax 42 -s " + str(sourcewidth) + "x" + str(sourceheight) + " -c:a libvorbis "
             if hasaudio:
-                ffmpeg_command=ffmpeg_command + " -c:a libvorbis "
+                #ffmpeg_command=ffmpeg_command + " -c:a libvorbis "
+                ffmpeg_command=ffmpeg_command + " -c:a " + audiolib
 
-            ffmpeg_command=ffmpeg_command + "-q 0 -threads " + str(threads) + " -filter_complex \""
+            ffmpeg_command=ffmpeg_command + " -q 0 -threads " + str(threads) + " -filter_complex \""
 
             ffmpeg_command=ffmpeg_command + "[0:v]trim="+ str(ss) + ":" + str(se) + ",setpts=PTS-STARTPTS[v" + str(i) + "]; "
 
@@ -1027,8 +1047,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
                     path="./slices/"
                     check_path(path)
                     height=calculate_height(width,sourcewidth,sourceheight)
-                    targetfile=path+destfile.rsplit( "." ,1 )[0]
-                    write_all_slices(sourcefile,slices,targetfile,fps,width,height,bitrate,threads,hasaudio)
+                    write_all_slices(sourcefile,slices,destfile,fps,width,height,bitrate,threads,hasaudio)
                 else:
                     print("No defined slice! (Press any key to continue)")
                     getchar()
