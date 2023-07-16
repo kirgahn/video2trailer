@@ -622,6 +622,82 @@ def custom_slice(sourcefile, sourcefps, sourcewidth, sourcebitrate, threads, has
 #                    if keep_loop == "n" or keep_loop == "N":
 #                        break
 
+def legacy_write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,hasaudio):
+    #logger("DEBUG: write_all_slices - hasaudio: "+str(hasaudio))
+    try:
+        path="./slices/"
+        #### encoder = either libx264 or libvpx
+        if destfile.endswith('.webm'):
+            quality_opts=" -quality good -cpu-used 0 -qmin 10 -qmax 42 -crf 10 -b:v " + str(sourcebitrate) + "k"
+            encoder="libvpx"
+            audiolib="libvorbis"
+            ext="webm"
+        elif destfile.endswith('.mp4'):
+            encoder="libx264"
+            quality_opts=" -preset slow -crf 22 -movflags +faststart -b:v " + str(sourcebitrate) + "k"
+            audiolib="aac"
+            ext="mp4"
+        else:
+            raise SystemExit("Unknown extension for file \"" + destfile + "\". Quitting now." )
+        start_time=time.time()
+
+        basefilename=path+destfile.rsplit( "." ,1 )[0]
+
+        vo_slices = []
+        logger("Encoding " + str(len(slices)) + " slices, each slice as a separate ouput file")
+        for i in range(len(slices)):
+            #outfile="\'" + destfile + "_" + str(i) + ".webm\'"
+            outfile="\'" + basefilename + "_" + str(i) + "." + ext + "\'"
+
+            ###DEBUG
+            logger("outfile:" + outfile)
+
+            (ss,se)=slices[i]
+
+            #### ffmpeg command building
+            ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -r " + str(sourcefps) + " -codec:v " + encoder + quality_opts + " -s " + str(sourcewidth) + "x" + str(sourceheight) # + " -c:a " + audiolib + " -q 0 -threads " + str(threads) + " -filter_complex \""
+            #ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -r " + str(sourcefps) + " -codec:v " + encoder + "  -quality good -cpu-used 0  -b:v " + str(sourcebitrate) + "k -qmin 10 -qmax 42 -s " + str(sourcewidth) + "x" + str(sourceheight) + " -c:a libvorbis "
+            if hasaudio:
+                #ffmpeg_command=ffmpeg_command + " -c:a libvorbis "
+                ffmpeg_command=ffmpeg_command + " -c:a " + audiolib
+
+            ffmpeg_command=ffmpeg_command + " -q 0 -threads " + str(threads) + " -filter_complex \""
+
+            ffmpeg_command=ffmpeg_command + "[0:v]trim="+ str(ss) + ":" + str(se) + ",setpts=PTS-STARTPTS[v" + str(i) + "]; "
+
+            if hasaudio:
+                ffmpeg_command=ffmpeg_command + "[0:a]atrim="+ str(ss) + ":" + str(se) + ",asetpts=PTS-STARTPTS[a" + str(i) + "]; "
+                ffmpeg_command=ffmpeg_command + "[v" + str(i) + "][a" + str(i) + "]"
+            else:
+                ffmpeg_command=ffmpeg_command + "[v" + str(i) + "]"
+
+            if hasaudio:
+                ffmpeg_command=ffmpeg_command + "concat=n=1:v=1:a=1[out]\" "
+            else:
+                ffmpeg_command=ffmpeg_command + "concat=n=1:v=1[out]\" "
+
+            ffmpeg_command=ffmpeg_command + "-map \"[out]\" " + outfile
+
+            try:
+                logger("Encoding slice #" + str(i) + " with filename " + outfile + ", using ffmpeg command: " + ffmpeg_command)
+                print("Encoding slice #" + str(i) + " with filename: " + outfile)
+                subprocess.call(ffmpeg_command,shell=True)
+
+            except OSError as err:
+                logger("Error: {0}".format(err))
+                print("Error: {0}".format(err) + " (Press any key to continue)")
+                getchar()
+
+            end_time=time.time()
+            elapsed_time=convert_to_minutes(end_time-start_time)
+            logger("Encoding done, elapsed time with " + str(threads) + " threads is: " + elapsed_time)
+            print("Elapsed time: " + elapsed_time)
+
+    except (ValueError, OSError) as err:
+        logger("Error: {0}".format(err))
+        print("Error: {0}".format(err) + " (Press any key to continue)")
+        getchar()
+
 def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,hasaudio):
     #logger("DEBUG: write_all_slices - hasaudio: "+str(hasaudio))
     try:
@@ -672,6 +748,7 @@ def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheig
         elapsed_time=convert_to_minutes(end_time-start_time)
         logger("Encoding done, elapsed time with " + str(threads) + " threads is: " + elapsed_time)
         print("Elapsed time: " + elapsed_time)
+        print("(Press any key to continue)")
         getchar()
 
     except (ValueError, OSError) as err:
@@ -733,7 +810,7 @@ def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
         elif confirm == "q" or confirm == "Q":
             break
 
-def change_settings(destfile,fps,width,bitrate,threads,target_size,write_full_quality,write_custom_quality,write_slices,show_info):
+def change_settings(destfile,fps,width,bitrate,threads,target_size,write_full_quality,write_custom_quality,legacy_write_slices,show_info):
     try:
         settings_loop=False
         while not settings_loop:
@@ -751,7 +828,7 @@ def change_settings(destfile,fps,width,bitrate,threads,target_size,write_full_qu
             print("5) encoder (t)hreads (" + str(threads) + ")")
             print("6) f(u)ll quality video output (" + str(write_full_quality) + ")")
             print("7) (v)ariable bitrate video output (" + str(write_custom_quality) + ")")
-            print("8) (s)lices output (" + str(write_slices) + ")")
+            print("8) legacy (s)lices output (" + str(legacy_write_slices) + ")")
             print("9) (q)uit to main menu")
             print("")
             print_separator()
@@ -783,10 +860,10 @@ def change_settings(destfile,fps,width,bitrate,threads,target_size,write_full_qu
             elif any(q in settings_choice for q in ["7","V","v"]):
                 write_custom_quality = not bool(write_custom_quality)
             elif any(q in settings_choice for q in ["8","S","s"]):
-                write_slices = not bool(write_slices)
+                legacy_write_slices = not bool(legacy_write_slices)
             elif any(q in settings_choice for q in ["9","Q","q"]):
                 settings_loop=True
-        return (destfile,fps,width,bitrate,threads,target_size,write_full_quality,write_custom_quality,write_slices)
+        return (destfile,fps,width,bitrate,threads,target_size,write_full_quality,write_custom_quality,legacy_write_slices)
     except (ValueError, OSError) as err:
         logger("Error: {0}".format(err))
         print("Error: {0}".format(err) + " (Press any key to continue)")
@@ -814,7 +891,7 @@ def load_state(state_file_name):
             target_size = int(state_file.readline().rstrip())
             write_full_quality = bool(int(state_file.readline().rstrip()))
             write_custom_quality = bool(int(state_file.readline().rstrip()))
-            write_slices = bool(int(state_file.readline().rstrip()))
+            legacy_write_slices = bool(int(state_file.readline().rstrip()))
 
             #### skip three lines
             state_file.readline().rstrip()
@@ -829,7 +906,7 @@ def load_state(state_file_name):
                 slices.append([ss,se])
 
         logger("Loading state file succeeded")
-        return (sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,write_slices)
+        return (sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,legacy_write_slices)
 
 
     except (ValueError, OSError) as err:
@@ -839,7 +916,7 @@ def load_state(state_file_name):
         getchar()
 
 #### Save State ####
-def save_state(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,write_slices,quiet):
+def save_state(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,legacy_write_slices,quiet):
     line_number = 0
     state_file_name=destfile + ".v2t"
     logger("Saving state file " + state_file_name)
@@ -858,7 +935,7 @@ def save_state(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,
             state_file.write(str(target_size)+"\n")
             state_file.write(str(int(write_full_quality))+"\n")
             state_file.write(str(int(write_custom_quality))+"\n")
-            state_file.write(str(int(write_slices))+"\n")
+            state_file.write(str(int(legacy_write_slices))+"\n")
 
             state_file.write(""+"\n")
             state_file.write("slices"+"\n")
@@ -1028,7 +1105,10 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
                     path="./slices/"
                     check_path(path)
                     height=calculate_height(width,sourcewidth,sourceheight)
-                    write_all_slices(sourcefile,slices,destfile,fps,width,height,bitrate,threads,hasaudio)
+                    if legacy_write_slices:
+                        legacy_write_all_slices(sourcefile,slices,destfile,fps,width,height,bitrate,threads,hasaudio)
+                    else:
+                        write_all_slices(sourcefile,slices,destfile,fps,width,height,bitrate,threads,hasaudio)
                 else:
                     print("No defined slice! (Press any key to continue)")
                     getchar()
@@ -1139,14 +1219,6 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
                             elif confirm == "q" or confirm == "Q":
                                 break
 
-                    #### write each slice as it's own webm
-                    if write_slices:
-                        path="./slices/"
-                        check_path(path)
-                        targetfile=path+destfile.rsplit( "." ,1 )[0]
-                        #write_all_slices(sourcefile,slices,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate)
-                        write_all_slices(sourcefile,slices,targetfile,fps,width,height,bitrate,threads,hasaudio)
-
                         print("Encoding completed (Press any key to continue)")
                         getchar()
             elif any(q in slices_choice for q in ["9","T","t"]):
@@ -1172,7 +1244,7 @@ def generate_autotrailer(sourcefile, destfile, sourcewidth, sourceheight, fps, w
         print("trailer generated, quitting...")
         logger("trailer generated, quitting...")
         if analyzerstatefile:
-            save_state(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,write_slices,True)
+            save_state(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,legacy_write_slices,True)
     else:
         print("sourcefile too short, aborting...")
         logger("sourcefile too short, aborting...")
@@ -1316,7 +1388,7 @@ def generate_sceneanalyzer_autotrailer(sourcefile, destfile, sourcewidth, source
         print("trailer generated, quitting...")
         logger("trailer generated, quitting...")
         if analyzerstatefile:
-            save_state(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,write_slices,True)
+            save_state(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,legacy_write_slices,True)
     else:
         print("sourcefile too short, aborting...")
         logger("sourcefile too short, aborting...")
@@ -1339,7 +1411,7 @@ editor="vim"
 
 write_full_quality=True
 write_custom_quality=True
-write_slices=False
+legacy_write_slices=False
 
 sourcefile = args.sourcefile
 
@@ -1351,7 +1423,7 @@ if not sourcefile[:4]=="http" and not os.path.isfile(sourcefile):
 
 if sourcefile.lower().endswith(('.v2t')):
     state_file_name=sourcefile
-    (sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,write_slices) = load_state(state_file_name)
+    (sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,legacy_write_slices) = load_state(state_file_name)
     (sourcewidth,sourceheight,sourcefps,sourcebitrate,sourceduration,hasaudio)=parse_ffprobe_info(sourcefile)
 else:
     if sourcefile[:4]=="http":
@@ -1362,7 +1434,7 @@ else:
 
     try:
         with open(state_file_name,encoding='utf-8'):
-            (sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,write_slices) = load_state(state_file_name)
+            (sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,legacy_write_slices) = load_state(state_file_name)
     except (ValueError, OSError):
         logger("No state file found, using default values")
 
@@ -1480,11 +1552,11 @@ try:
         elif any(q in choice for q in ["3","E","e"]):
             slices = slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourceheight,sourcefps,show_info,show_slice_lenght)
         elif any(q in choice for q in ["4","c","c"]):
-            (destfile,fps,width,bitrate,threads,target_size,write_full_quality,write_custom_quality,write_slices) = change_settings(destfile,fps,width,bitrate,threads,target_size,write_full_quality,write_custom_quality,write_slices,show_info)
+            (destfile,fps,width,bitrate,threads,target_size,write_full_quality,write_custom_quality,legacy_write_slices) = change_settings(destfile,fps,width,bitrate,threads,target_size,write_full_quality,write_custom_quality,legacy_write_slices,show_info)
         elif any(q in choice for q in ["5","i","i"]):
             show_info=not show_info
         elif any(q in choice for q in ["6","S","s"]):
-            save_state(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,write_slices,False)
+            save_state(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,write_full_quality,write_custom_quality,legacy_write_slices,False)
         elif any(q in choice for q in ["6","Q","q"]):
             os.system('cls||clear')
             logger("Quitting video2trailer")
