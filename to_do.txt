@@ -1,0 +1,6 @@
+- add HEVC encoding
+- add all three available methods to "generate slices" from within the editor
+- fix crash when opening a statefile when the original video file is missing
+- add optional crossfading between slices
+- change v2t files and statefiles to YML from simple txt - this opens up options to make add/remove options to the v2t files without breaking loading/parsing. This change should take into account loading and converting the original files to YML (or should I do that as a separate helper script?)
+- consider refactoring the code from one monolithic pile of shite into something more modular, so that functions can live in their own files. This should take into account either a) properly installing the files as required by python programs or b) compile everything into one single pyc file
