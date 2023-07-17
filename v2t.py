@@ -325,63 +325,6 @@ def add_slice(slices,sourceduration):
 
     return slices
 
-#def insert_slice(slices,sourceduration):
-#    try:
-#
-#        print("In which position would you like to add a new subclip?")
-#        newpos=int(input("#"))
-#
-#        if not (newpos > len(slices)):
-#            print("Please insert start time for the new subclip (hh:mm:ss.msc)")
-#            ss=convert_to_seconds(time_input())
-#
-#            print("Please insert end time for the new subclip (hh:mm:ss.msc)")
-#            se=convert_to_seconds(time_input())
-#
-#            if (float(ss) < sourceduration) and (float(se) < sourceduration):
-#                slices.insert(newpos,[ss,se])
-#            else:
-#                print("Slices can't start/end after the end of the source video. (Press any key to continue)")
-#                getchar()
-#        else:
-#            print("Invalid slice position selected. (Press any key to continue)")
-#            getchar()
-#
-#    except ValueError as err:
-#        logger("Error: {0}".format(err))
-#        print("Error: {0}".format(err))
-#        print("Either specified time values are incorrect or slice position is invalid. (Press any key to continue)")
-#        getchar()
-#    return slices
-#
-#def change_slice(slices,sourceduration):
-#    try:
-#        print("Which slice would you like to change?")
-#        change_index=int(input("#"))
-#        if not (change_index > len(slices)):
-#
-#            print("Please insert start time for the new subclip (hh:mm:ss.msc)")
-#            ss=convert_to_seconds(time_input())
-#
-#            print("Please insert end time for the new subclip (hh:mm:ss.msc)")
-#            se=convert_to_seconds(time_input())
-#
-#            if (float(ss) < sourceduration) or (float(se) < sourceduration):
-#                slices[change_index]=(ss,se)
-#            else:
-#                print("Slices can't start/end after the end of the source video. (Press any key to continue)")
-#                getchar()
-#        else:
-#            print("Invalid slice position selected. (Press any key to continue)")
-#            getchar()
-#
-#    except ValueError as err:
-#        logger("Error: {0}".format(err))
-#        print("Error: {0}".format(err))
-#        print("Either specified time values are incorrect or slice position is invalid. (Press any key to continue)")
-#        getchar()
-#    return slices
-
 def remove_slice(slices):
     try:
         print("Which slice would you like to remove?")
@@ -485,9 +428,7 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
         print("Error: {0}".format(err) + " (Press any key to continue)")
         getchar()
 
-def custom_slice(sourcefile, sourcefps, sourcewidth, sourcebitrate, threads, hasaudio):
-                ### Needs webm/mp4 rework here!!!!
-                #### custom slice is here
+def custom_slice(sourcefile, destfile, sourcefps, sourcewidth, sourcebitrate, threads, hasaudio):
                 custom_slice = []
                 custom_slice_quality=""
                 logger("custom slice function called")
@@ -526,7 +467,7 @@ def custom_slice(sourcefile, sourcefps, sourcewidth, sourcebitrate, threads, has
                         return
 
                     keep_first_pass_log=False
-                    print("Would you like to encode with full or variable quality? (f/v/fv)",flush=True)
+                    print("Would you like to encode with full quality, variable or both? (f/v/fv)",flush=True)
                     custom_slice_quality=input("#")
 
                     if custom_slice_quality=="v" or custom_slice_quality=="fv":
@@ -549,7 +490,14 @@ def custom_slice(sourcefile, sourcefps, sourcewidth, sourcebitrate, threads, has
                         if custom_fps=="" :
                             custom_fps=sourcefps
 
-                    ext=".webm"
+                    try:                        
+                        if destfile.endswith('.webm'):
+                            ext=".webm"
+                        elif destfile.endswith('.mp4'):
+                            ext=".mp4"
+                    except:
+                        raise SystemExit("Unknown extension for file \"" + destfile + "\". Quitting now.")
+
                     path="./custom/"
                     check_path(path)
 
@@ -617,11 +565,6 @@ def custom_slice(sourcefile, sourcefps, sourcewidth, sourcebitrate, threads, has
                     if confirm == "t" or confirm == "T":
                         continue
 
-#                    print("try again? (y/n)")
-#                    keep_loop=input("#")
-#                    if keep_loop == "n" or keep_loop == "N":
-#                        break
-
 def legacy_write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,hasaudio):
     #logger("DEBUG: write_all_slices - hasaudio: "+str(hasaudio))
     try:
@@ -646,7 +589,6 @@ def legacy_write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sou
         vo_slices = []
         logger("Encoding " + str(len(slices)) + " slices, each slice as a separate ouput file")
         for i in range(len(slices)):
-            #outfile="\'" + destfile + "_" + str(i) + ".webm\'"
             outfile="\'" + basefilename + "_" + str(i) + "." + ext + "\'"
 
             ###DEBUG
@@ -766,7 +708,7 @@ def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
     font="DejaVuSans-Bold.ttf"
     fontsize=100
     opts=" -cpu-used 8 -threads " + str(threads)
-    #try:
+    
     vo_slices = []
 
     ffmpeg_command="ffmpeg -stats -v quiet -i \'" + sourcefile + "\' -y -codec:v " + encoder + " -b:v " + str(bitrate) + " -s " + str(width) + "x" + str(height) + opts + " -c:a " + audio_encoder + " -q 0 -filter_complex \""
@@ -1161,7 +1103,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
                     getchar()
 
             elif any(q in slices_choice for q in ["7","C","c"]):
-                custom_slice(sourcefile, sourcefps, sourcewidth, sourcebitrate, threads, hasaudio)
+                custom_slice(sourcefile, destfile, sourcefps, sourcewidth, sourcebitrate, threads, hasaudio)
             elif any(q in slices_choice for q in ["8","W","w"]):
                 if slices:
                     if destfile.endswith('.mp4'):
