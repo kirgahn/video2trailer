@@ -1,4 +1,3 @@
-- add HEVC encoding
 - add all three available methods to "generate slices" from within the editor
 - fix crash when opening a statefile when the original video file is missing
 - add optional crossfading between slices

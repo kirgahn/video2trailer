@@ -401,21 +401,21 @@ def remove_slice(slices):
 
 def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,keep_first_pass_log,hasaudio):
     try:
-        #### encoder = either libx264 or libvpx
+        #### encoder = either libx265 or libvpx
         if destfile.endswith('.webm'):
             quality_opts=" -quality good -cpu-used 0 -qmin 10 -qmax 42 -crf 10 -b:v " + str(sourcebitrate) + "k"
             encoder="libvpx"
             audiolib="libvorbis"
             ext="webm"
         elif destfile.endswith('.mp4'):
-            encoder="libx264"
+            encoder="libx265"
             quality_opts=" -preset slow -crf 22 -movflags +faststart -b:v " + str(sourcebitrate) + "k"
             audiolib="aac"
             ext="mp4"
         else:
             raise SystemExit("Unknown extension for file \"" + destfile + "\". Quitting now." )
 
-        print("DEBUG: Destfile: "+ destfile +", ext: " + ext)
+        #print("DEBUG: Destfile: "+ destfile +", ext: " + ext)
 
         #### with libvpx options
         ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -r " + str(sourcefps) + " -codec:v " + encoder + quality_opts + " -s " + str(sourcewidth) + "x" + str(sourceheight) + " -c:a " + audiolib + " -q 0 -threads " + str(threads) + " -filter_complex \""
@@ -626,14 +626,14 @@ def legacy_write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sou
     #logger("DEBUG: write_all_slices - hasaudio: "+str(hasaudio))
     try:
         path="./slices/"
-        #### encoder = either libx264 or libvpx
+        #### encoder = either libx265 or libvpx
         if destfile.endswith('.webm'):
             quality_opts=" -quality good -cpu-used 0 -qmin 10 -qmax 42 -crf 10 -b:v " + str(sourcebitrate) + "k"
             encoder="libvpx"
             audiolib="libvorbis"
             ext="webm"
         elif destfile.endswith('.mp4'):
-            encoder="libx264"
+            encoder="libx265"
             quality_opts=" -preset slow -crf 22 -movflags +faststart -b:v " + str(sourcebitrate) + "k"
             audiolib="aac"
             ext="mp4"
@@ -702,14 +702,14 @@ def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheig
     #logger("DEBUG: write_all_slices - hasaudio: "+str(hasaudio))
     try:
         path="./slices/"
-        #### encoder = either libx264 or libvpx
+        #### encoder = either libx265 or libvpx
         if destfile.endswith('.webm'):
             quality_opts=" -quality good -cpu-used 0 -qmin 10 -qmax 42 -crf 10 -b:v " + str(sourcebitrate) + "k"
             encoder="libvpx"
             audiolib="libvorbis"
             ext="webm"
         elif destfile.endswith('.mp4'):
-            encoder="libx264"
+            encoder="libx265"
             quality_opts=" -preset slow -crf 22 -movflags +faststart -b:v " + str(sourcebitrate) + "k"
             audiolib="aac"
             ext="mp4"
@@ -757,13 +757,7 @@ def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheig
         getchar()
 
 def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
-    #### Encoders
-    #### VP8:
-    #encoder="libvpx" ### either x264/mp4 or libvpx/webm
-    #audio_encoder="libvorbis"
-    #file_ext="webm"
-    #### H264
-    encoder="libx264"
+    encoder="libx265"
     audio_encoder="aac"
     file_ext="mp4"
 
