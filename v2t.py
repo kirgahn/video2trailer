@@ -1030,8 +1030,47 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
             slices_choice=getchar()
 
             if any(q in slices_choice for q in ["0","G","g"]):
-                new_slices=[]
-                new_slices = generate_slices(sourceduration, 0, 0)
+                print("Which algorithm would you like to use: Simple, GT scdet, Lavfi scdet or PySceneDetect? (s/g/l/p)")
+                scdet_algorithm = getchar()
+                if scdet_algorithm == "s" or scdet_algorithm == "S":
+                    new_slices=[]
+                    new_slices = generate_slices(sourceduration, 0, 0)
+                else:
+                    # collect all the params for the other algorithms
+                    print("Please select the overall duration for the clip in seconds:")
+                    outputlenght=int(input("# "))
+                    print("Would you like to skip ahead scene detection? (default 00:00:00.000):")
+                    analyzeskipahead=convert_to_seconds(time_input())
+                    print("Would you like to trim the end of the video for scene detection? (default 00:00:00.000):")
+                    analyzetrimend=convert_to_seconds(time_input())
+                    print("Would you like to double the sampling? (y/n, default no):")
+                    double_det=str(input("# "))
+                    if double_det == "" or double_det == "n" or double_det == "N":
+                        analyzerdoublescenes = False
+                    else:
+                        analyzerdoublescenes = True
+
+                    if scdet_algorithm == "g" or scdet_algorithm == "g":
+                        print("Please select the threshold value for the scene detection (0-1, default 0.4):")
+                        analyzerthreshold=str(input("# "))
+                        if analyzerthreshold == "":
+                            analyzerthreshold = "0.4"
+                        new_slices=scene_analyzer(sourcefile,outputlenght,sourceduration,analyzerthreshold,analyzeskipahead,analyzetrimend,1,analyzerdoublescenes)
+                    elif scdet_algorithm == "l" or scdet_algorithm == "l":
+                        print("Please select the threshold value for the scene detection (default 16):")
+                        analyzerthreshold=str(input("# "))
+                        if analyzerthreshold == "":
+                            analyzerthreshold = "16"
+                        new_slices=scene_analyzer(sourcefile,outputlenght,sourceduration,analyzerthreshold,analyzeskipahead,analyzetrimend,2,analyzerdoublescenes)
+                    elif scdet_algorithm == "p" or scdet_algorithm == "p":
+                        print("Please select the threshold value for the scene detection (default 20):")
+                        analyzerthreshold=str(input("# "))
+                        if analyzerthreshold == "":
+                            analyzerthreshold = "20"
+                        analyzeskipahead=convert_to_minutes(analyzeskipahead)
+                        analyzetrimend=convert_to_minutes(analyzetrimend)
+                        new_slices=scene_analyzer(sourcefile,outputlenght,sourceduration,analyzerthreshold,analyzeskipahead,analyzetrimend,3,analyzerdoublescenes)
+
                 if new_slices:
                     slices = new_slices
             elif any(q in slices_choice for q in ["1","A","a"]):
@@ -1197,7 +1236,7 @@ def scene_analyzer(sourcefile,outputlenght,sourceduration,analyzerthreshold,anal
         sourceduration_skipahead=float(sourceduration)-float(convert_to_seconds(analyzeskipahead))
         #print("DEBUG: sourceduration_skipahead="+str(sourceduration_skipahead)+", analyzetrimend="+str(convert_to_seconds(analyzetrimend)))
         trimmed_lenght=convert_to_minutes(sourceduration_skipahead-float(convert_to_seconds(analyzetrimend)))
-        ffmpeg_command="ffmpeg -nostdin -f lavfi -ss "+analyzeskipahead+" -to "+ str(trimmed_lenght)+" -i \"movie="+sourcefile+",scdet=s=1:t="+str(round(analyzerthreshold))+"\" -vf \"showinfo\" -f null - 2>\""+sourcefile+".sceneanalyzer\""
+        ffmpeg_command="ffmpeg -nostdin -f lavfi -ss "+analyzeskipahead+" -to "+ str(trimmed_lenght)+" -i \"movie="+sourcefile+",scdet=s=1:t="+str(float(analyzerthreshold))+"\" -vf \"showinfo\" -f null - 2>\""+sourcefile+".sceneanalyzer\""
     elif sceneanalyzer == 3:
         #ffmpeg pySceneDetect
         ffmpeg_command="scenedetect --input \""+sourcefile+"\" --stats \""+sourcefile+".stats.csv\" --min-scene-len 00:01:00 time --start "+analyzeskipahead+" --end "+analyzetrimend+" detect-content --threshold "+str(analyzerthreshold)+" list-scenes -f \""+sourcefile+".scenes.csv\""
