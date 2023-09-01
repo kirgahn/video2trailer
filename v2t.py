@@ -715,7 +715,9 @@ def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
     for i in range(len(slices)):
         (ss,se)=slices[i]
         ffmpeg_command=ffmpeg_command + "[0:v]trim="+ str(ss) + ":" + str(se) + ",setpts=PTS-STARTPTS[todraw" + str(i) + "]; "
-        ffmpeg_command=ffmpeg_command + "[todraw" + str(i) + "]drawtext=fontsize="+ str(fontsize) + ":fontcolor=black:box=1:boxcolor=white:fontfile=" + font + ":text=" + str(i) + "[v" + str(i) + "]; "
+        ffmpeg_command=ffmpeg_command + "[todraw" + str(i) + "]drawtext=fontsize="+ str(fontsize) + ":fontcolor=black:box=1:boxcolor=white:fontfile=" + font + ":text=" + str(i) + ","
+        ffmpeg_command=ffmpeg_command + "drawtext=fontsize="+ str(fontsize/3) + ":fontcolor=black:box=1:boxcolor=white:fontfile=" + font + ":text='%{pts \:hms \: " + str(ss) + "}':x=main_w/2:y=main_h-text_h-10,"
+        ffmpeg_command=ffmpeg_command + "drawtext=fontsize="+ str(fontsize/3) + ":fontcolor=black:box=1:boxcolor=white:fontfile=" + font + ":text='%{pts \:hms}':x=10:y=main_h-text_h-10"+ "[v" + str(i) + "];"
         ffmpeg_command=ffmpeg_command + "[0:a]atrim="+ str(ss) + ":" + str(se) + ",asetpts=PTS-STARTPTS[a" + str(i) + "]; "
 
     for i in range(len(slices)):

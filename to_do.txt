@@ -1,5 +1,3 @@
-- add own timestamps of each slice in the preview, so that you know, for eg., that this is the fourth second of the slice itself
-- add the source timestime in the preview file, so that you know exactly where you are compared to the source
 - fix crash when opening a statefile when the original video file is missing
 - add optional crossfading between slices
 - change v2t files and statefiles to YML from simple txt - this opens up options to make add/remove options to the v2t files without breaking loading/parsing. This change should take into account loading and converting the original files to YML (or should I do that as a separate helper script?)
