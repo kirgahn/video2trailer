@@ -913,26 +913,45 @@ def write_tmpstatefile(slices,tmp_state_file):
         print("Error: {0}".format(err) + " (Press any key to continue)")
         getchar()
 
-#### Edit slices with an external editor ####
-def external_edit(slices,editor):
-    state_path='./states/'
-    check_path(state_path)
-    tmpfile=state_path + destfile+str(random.randint(0,1024))+".edit.v2t"
-    global undo_index
-    try:
-        write_tmpstatefile(slices,tmpfile)
+def undo_list_update(slices,prev_slices,before_operation):
+    # "before operation" bool defines if we're trying to save the state 
+    # before doing some action (add, edit, etc) or after
+    # that's because the checks are different
+    
+    ###DEBUG:
+    #logger("slices")
+    #logger(str(slices))
+    #logger("prev_slices")
+    #logger(str(prev_slices))
+    #logger("before_operation" + str(before_operation))
+    ###DEBUG
 
+    global undo_index
+    if before_operation:
         if len(undo_list) > 0:
             if not slices == next(reversed(undo_list)):
                 undo_list.append(slices)
                 undo_index=undo_index+1
         elif len(undo_list) == 0:
             undo_list.append(slices)
+    else:
+        if not prev_slices == slices:
+            undo_list.append(slices)
+            undo_index=undo_index+1
+
+#### Edit slices with an external editor ####
+def external_edit(slices,editor):
+    state_path='./states/'
+    check_path(state_path)
+    tmpfile=state_path + destfile+str(random.randint(0,1024))+".edit.v2t"
+    try:
+        write_tmpstatefile(slices,tmpfile)
+        undo_list_update(slices,"",True)
 
         logger("Editing slices with external editor using command: " + editor + " " + tmpfile)
         subprocess.call(editor + " " + "\"" + tmpfile + "\"",shell=True)
 
-        prev_slices=slices
+        prev_slices=slices.copy()
         slices=[]
         with open(tmpfile, encoding='utf-8') as state_file:
             for a_line in state_file:
@@ -942,10 +961,7 @@ def external_edit(slices,editor):
                     se=convert_to_seconds(slice_line.split('-')[1])
                     slices.append([ss,se])
         logger("Reloading slices edited with external editor succedeed")
-        if not prev_slices == slices:
-            undo_list.append(slices)
-            undo_index
-            undo_index=undo_index+1
+        undo_list_update(slices, prev_slices, False)
 
         return(slices)
 
@@ -1115,7 +1131,28 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
                 if new_slices:
                     slices = new_slices
             elif any(q in slices_choice for q in ["1","A","a"]):
+                undo_list_update(slices,"",True)
+                past_slices=slices.copy()
+
+                #DEBUG
+                logger("before add slices")
+                logger(str(slices))
+                logger("prev_slices")
+                logger(str(past_slices))
+                logger("before_operation True")
+                #DEBUG
+
                 slices = add_slice(slices,sourceduration)
+
+                #DEBUG
+                logger("after add slices")
+                logger(str(slices))
+                logger("past_slices")
+                logger(str(past_slices))
+                logger("before_operation False")
+                #DEBUG
+
+                undo_list_update(slices, past_slices, False)
             elif any(q in slices_choice for q in ["2","N","n"]):
                 if slices:
                     path="./slices/"
@@ -1251,14 +1288,14 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
                     slices=undo_list[0]
                     undo_index=0
                 logger("selected state "+ str(undo_index) + "/" + str(len(undo_list)))
-                logger("### DEBUG undo_list n:" + str(len(undo_list)))
+                #logger("### DEBUG undo_list n:" + str(len(undo_list)))
             elif any(q in slices_choice for q in ["12","R","r"]):
-                logger("DEBUG: len(undo_list) "+ str(len(undo_list)) + ", undo_index " + str(undo_index))
+                #logger("DEBUG: len(undo_list) "+ str(len(undo_list)) + ", undo_index " + str(undo_index))
                 if not(len(undo_list) == 0) and undo_index +1 < (len(undo_list)):
                     slices=undo_list[undo_index+1]
                     undo_index=undo_index+1
                 logger("selected state "+ str(undo_index) + "/" + str(len(undo_list)))
-                logger("### DEBUG undo_list n:" + str(len(undo_list)))
+                #logger("### DEBUG undo_list n:" + str(len(undo_list)))
             elif any(q in slices_choice for q in ["13","Q","q"]):
                 slices_loop=True
         return slices
