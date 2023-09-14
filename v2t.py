@@ -931,6 +931,30 @@ def external_edit(slices,editor):
         print("Error: {0}".format(err) + " (Press any key to continue)")
         getchar()
 
+#### Load/Recover previous statefile ####
+def load_prev_statefile(prev_state_file):
+    state_path='./states/'
+    check_path(state_path)
+    tmpfile=state_path + prev_state_file
+
+    try:
+        slices=[]
+        with open(tmpfile, encoding='utf-8') as state_file:
+            for a_line in state_file:
+                    slice_line=a_line.rstrip()
+                    slice_line=slice_line.split(")")[1]
+                    ss=convert_to_seconds(slice_line.split('-')[0])
+                    se=convert_to_seconds(slice_line.split('-')[1])
+                    slices.append([ss,se])
+        logger("Recovering slices from specified statefile " + prev_state_file + " succeeded")
+        return(slices)
+
+    except (ValueError, OSError) as err:
+        logger("Can't open state file - " + prev_state_file + " - Error: {0}".format(err))
+        print("Can't open state file - " + prev_state_file)
+        print("Error: {0}".format(err) + " (Press any key to continue)")
+        getchar()
+
 def youtube_dl_get_url(sourcefile):
     command='youtube-dl -q --no-warnings -f best -g \'' + sourcefile + '\''
     logger("Extracting video URL info with command: " + command)
@@ -1019,8 +1043,9 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
             print("6) (p)review clip")
             print("7) (c)ustom slice")
             print("8) (w)rite destination file/s")
-            print("9) (t)oggle slice lenght")
-            print("10) (q)uit to main menu")
+            print("9) (l)oad previous statefile")
+            print("10) (t)oggle slice lenght")
+            print("11) (q)uit to main menu")
             print("")
             print_separator()
 
@@ -1198,9 +1223,12 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
 
                         print("Encoding completed (Press any key to continue)")
                         getchar()
-            elif any(q in slices_choice for q in ["9","T","t"]):
+            elif any(q in slices_choice for q in ["9","L","l"]):
+                prev_state_file = input("Please specify the old statefile name: ")
+                slices = load_prev_statefile(prev_state_file)
+            elif any(q in slices_choice for q in ["10","T","t"]):
                 show_slice_lenght=not show_slice_lenght
-            elif any(q in slices_choice for q in ["10","Q","q"]):
+            elif any(q in slices_choice for q in ["11","Q","q"]):
                 slices_loop=True
         return slices
     except (ValueError, OSError) as err:
