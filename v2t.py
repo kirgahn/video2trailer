@@ -897,23 +897,42 @@ def save_state(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,
         print("Error: {0}".format(err) + " (Press any key to continue)")
         getchar()
 
+def write_tmpstatefile(slices,tmp_state_file):
+    try:
+        with open(tmp_state_file,mode='w', encoding='utf-8') as state_file:
+            for i in range(len(slices)):
+                    (ss,se)=slices[i]
+                    ss=convert_to_minutes(ss)
+                    se=convert_to_minutes(se)
+                    state_file.write(str(i) + ")" +  str(ss)+"-"+str(se)+"\n")
+                    i += 1
+
+    except (ValueError, OSError) as err:
+        logger("Can't write temporary state file - " + "Error: {0}".format(err))
+        print("Can't write temporary state file!")
+        print("Error: {0}".format(err) + " (Press any key to continue)")
+        getchar()
+
 #### Edit slices with an external editor ####
 def external_edit(slices,editor):
     state_path='./states/'
     check_path(state_path)
     tmpfile=state_path + destfile+str(random.randint(0,1024))+".edit.v2t"
+    global undo_index
     try:
-        with open(tmpfile,mode='w', encoding='utf-8') as state_file:
-                        for i in range(len(slices)):
-                                (ss,se)=slices[i]
-                                ss=convert_to_minutes(ss)
-                                se=convert_to_minutes(se)
-                                state_file.write(str(i) + ")" +  str(ss)+"-"+str(se)+"\n")
-                                i += 1
+        write_tmpstatefile(slices,tmpfile)
+
+        if len(undo_list) > 0:
+            if not slices == next(reversed(undo_list)):
+                undo_list.append(slices)
+                undo_index=undo_index+1
+        elif len(undo_list) == 0:
+            undo_list.append(slices)
 
         logger("Editing slices with external editor using command: " + editor + " " + tmpfile)
         subprocess.call(editor + " " + "\"" + tmpfile + "\"",shell=True)
 
+        prev_slices=slices
         slices=[]
         with open(tmpfile, encoding='utf-8') as state_file:
             for a_line in state_file:
@@ -923,6 +942,11 @@ def external_edit(slices,editor):
                     se=convert_to_seconds(slice_line.split('-')[1])
                     slices.append([ss,se])
         logger("Reloading slices edited with external editor succedeed")
+        if not prev_slices == slices:
+            undo_list.append(slices)
+            undo_index
+            undo_index=undo_index+1
+
         return(slices)
 
     except (ValueError, OSError) as err:
@@ -1032,11 +1056,11 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
                 print_separator()
             print("0) (g)enerate slices                    7) (c)ustom slice")
             print("1) (a)dd slice                          8) (w)rite destination file/s")
-            print("2) (r)ender all slices individually     9) (l)oad previous statefile")
+            print("2) e(n)code all slices individually     9) (l)oad previous statefile")
             print("3) (d)elete all slices                  10) (t)oggle slice lenght")
-            print("4) (e)dit all slices                    11) (q)uit to main menu")
-            print("5) (s)lice preview")
-            print("6) (p)review clip")
+            print("4) (e)dit all slices                    11) (u)ndo")
+            print("5) (s)lice preview                      12) (r)edo")
+            print("6) (p)review clip                       13) (q)uit to main menu")
             print_separator()
 
             if slices:
@@ -1092,7 +1116,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
                     slices = new_slices
             elif any(q in slices_choice for q in ["1","A","a"]):
                 slices = add_slice(slices,sourceduration)
-            elif any(q in slices_choice for q in ["2","R","r"]):
+            elif any(q in slices_choice for q in ["2","N","n"]):
                 if slices:
                     path="./slices/"
                     check_path(path)
@@ -1218,7 +1242,24 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
                 slices = load_prev_statefile(prev_state_file)
             elif any(q in slices_choice for q in ["10","T","t"]):
                 show_slice_lenght=not show_slice_lenght
-            elif any(q in slices_choice for q in ["11","Q","q"]):
+            elif any(q in slices_choice for q in ["11","U","u"]):
+                global undo_index
+                if undo_index > 0 and not undo_index == 0:
+                    slices=undo_list[undo_index-1]
+                    undo_index=undo_index-1
+                elif undo_index == 1:
+                    slices=undo_list[0]
+                    undo_index=0
+                logger("selected state "+ str(undo_index) + "/" + str(len(undo_list)))
+                logger("### DEBUG undo_list n:" + str(len(undo_list)))
+            elif any(q in slices_choice for q in ["12","R","r"]):
+                logger("DEBUG: len(undo_list) "+ str(len(undo_list)) + ", undo_index " + str(undo_index))
+                if not(len(undo_list) == 0) and undo_index +1 < (len(undo_list)):
+                    slices=undo_list[undo_index+1]
+                    undo_index=undo_index+1
+                logger("selected state "+ str(undo_index) + "/" + str(len(undo_list)))
+                logger("### DEBUG undo_list n:" + str(len(undo_list)))
+            elif any(q in slices_choice for q in ["13","Q","q"]):
                 slices_loop=True
         return slices
     except (ValueError, OSError) as err:
@@ -1522,6 +1563,9 @@ else:
 quit_loop=False
 show_info=True
 show_slice_lenght=True
+
+undo_list=[]
+undo_index=0
 
 try:
     while not quit_loop:
