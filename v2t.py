@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import random
 from datetime import datetime, timedelta
 import time
@@ -897,7 +896,10 @@ def save_state(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,
         print("Error: {0}".format(err) + " (Press any key to continue)")
         getchar()
 
-def write_tmpstatefile(slices,tmp_state_file):
+def write_tmpstatefile(slices):
+    global state_path
+    check_path(state_path)
+    tmp_state_file=state_path + destfile+str(random.randint(0,1024))+".edit.v2t"
     try:
         with open(tmp_state_file,mode='w', encoding='utf-8') as state_file:
             for i in range(len(slices)):
@@ -906,6 +908,7 @@ def write_tmpstatefile(slices,tmp_state_file):
                     se=convert_to_minutes(se)
                     state_file.write(str(i) + ")" +  str(ss)+"-"+str(se)+"\n")
                     i += 1
+        return(tmp_state_file)
 
     except (ValueError, OSError) as err:
         logger("Can't write temporary state file - " + "Error: {0}".format(err))
@@ -937,11 +940,8 @@ def undo_list_update(slices,prev_slices,before_operation):
 
 #### Edit slices with an external editor ####
 def external_edit(slices,editor):
-    state_path='./states/'
-    check_path(state_path)
-    tmpfile=state_path + destfile+str(random.randint(0,1024))+".edit.v2t"
     try:
-        write_tmpstatefile(slices,tmpfile)
+        tmpfile=write_tmpstatefile(slices)
         undo_list_update(slices,"",True)
 
         logger("Editing slices with external editor using command: " + editor + " " + tmpfile)
@@ -969,7 +969,7 @@ def external_edit(slices,editor):
 
 #### Load/Recover previous statefile ####
 def load_prev_statefile(prev_state_file):
-    state_path='./states/'
+    global state_path
     check_path(state_path)
     tmpfile=state_path + prev_state_file
 
@@ -1058,6 +1058,7 @@ def print_source_info(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth
     print("resolution: " + str(sourcewidth) + "x" + str(sourceheight) + " - fps: " + str(fps) + " - bitrate: " + str(sourcebitrate) + "k - lenght: " + str(convert_to_minutes(sourceduration)))
 
 def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourceheight,sourcefps,show_info,show_slice_lenght):
+    global state_path
     try:
         slices_loop=False
         while not slices_loop:
@@ -1128,12 +1129,16 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
                         new_slices=scene_analyzer(sourcefile,outputlenght,sourceduration,analyzerthreshold,analyzeskipahead,analyzetrimend,3,analyzerdoublescenes)
                 if new_slices:
                     slices = new_slices
+                    tmpfile=state_path + destfile+str(random.randint(0,1024))+".edit.v2t"
+                    write_tmpstatefile(slices)
                 undo_list_update(slices, prev_slices, False)
             elif any(q in slices_choice for q in ["1","A","a"]):
                 undo_list_update(slices,"",True)
                 past_slices=slices.copy()
                 slices = add_slice(slices,sourceduration)
                 undo_list_update(slices, past_slices, False)
+                tmpfile=state_path + destfile+str(random.randint(0,1024))+".edit.v2t"
+                write_tmpstatefile(slices)
             elif any(q in slices_choice for q in ["2","N","n"]):
                 if slices:
                     path="./slices/"
@@ -1146,11 +1151,6 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
                 else:
                     print("No defined slice! (Press any key to continue)")
                     getchar()
-                #if slices:
-                #    slices = remove_slice(slices)
-                #else:
-                #    print("No defined slice! (Press any key to continue)")
-                #    getchar()
             elif any(q in slices_choice for q in ["3","D","d"]):
                 if slices:
                     print("Confirm operation (y/n)")
@@ -1462,6 +1462,7 @@ else:
     
 player_extra_opts="-loop 0 &>/dev/null &"
 editor="vim"
+state_path="./states/"
 
 write_full_quality=True
 write_custom_quality=True
