@@ -88,13 +88,13 @@ def get_screen_width():
     cmd = ['xrandr']
     cmd2 = ['grep', '*']
     cmd3 = ['head', '-1']
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-    p2 = subprocess.Popen(cmd2, stdin=p.stdout, stdout=subprocess.PIPE)
-    p3 = subprocess.Popen(cmd3, stdin=p2.stdout, stdout=subprocess.PIPE)
-    p.stdout.close()
-    resolution_string, junk = p3.communicate()
-    #horrible workaround to avoid crash when running without display
     try:
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        p2 = subprocess.Popen(cmd2, stdin=p.stdout, stdout=subprocess.PIPE)
+        p3 = subprocess.Popen(cmd3, stdin=p2.stdout, stdout=subprocess.PIPE)
+        p.stdout.close()
+        resolution_string, junk = p3.communicate()
+        #horrible workaround to avoid crash when running without display
         resolution = resolution_string.split()[0]
         width, height = resolution.decode("utf-8").split('x')
     except (BaseException) as err:
@@ -917,26 +917,22 @@ def undo_list_update(slices,prev_slices,before_operation):
     # "before operation" bool defines if we're trying to save the state 
     # before doing some action (add, edit, etc) or after
     # that's because the checks are different
-    
-    ###DEBUG:
-    #logger("slices")
-    #logger(str(slices))
-    #logger("prev_slices")
-    #logger(str(prev_slices))
-    #logger("before_operation" + str(before_operation))
-    ###DEBUG
-
     global undo_index
     if before_operation:
-        if len(undo_list) > 0:
+        if len(undo_list) > 0 and len(slices) > 0:
             if not slices == next(reversed(undo_list)):
-                undo_list.append(slices)
+                undo_list.append(slices.copy())
                 undo_index=undo_index+1
-        elif len(undo_list) == 0:
-            undo_list.append(slices)
+        elif len(undo_list) == 0 and len(slices) > 0:
+            #undo_list.append(next(reversed(slices)))
+            undo_list.append(slices.copy())
+            undo_index=undo_index+1
     else:
         if not prev_slices == slices:
-            undo_list.append(slices)
+            #undo_list.append(next(reversed(slices)))
+            undo_list.append(slices.copy())
+            #for i in range(len(slices)):
+            #    undo_list[undo_index][i]=slices[i]
             undo_index=undo_index+1
 
 #### Edit slices with an external editor ####
@@ -1087,6 +1083,9 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
             slices_choice=getchar()
 
             if any(q in slices_choice for q in ["0","G","g"]):
+                undo_list_update(slices,"",True)
+                prev_slices=slices.copy()
+
                 print("Which algorithm would you like to use: Simple, GT scdet, Lavfi scdet or PySceneDetect? (s/g/l/p)")
                 scdet_algorithm = getchar()
                 if scdet_algorithm == "s" or scdet_algorithm == "S":
@@ -1127,31 +1126,13 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
                         analyzeskipahead=convert_to_minutes(analyzeskipahead)
                         analyzetrimend=convert_to_minutes(analyzetrimend)
                         new_slices=scene_analyzer(sourcefile,outputlenght,sourceduration,analyzerthreshold,analyzeskipahead,analyzetrimend,3,analyzerdoublescenes)
-
                 if new_slices:
                     slices = new_slices
+                undo_list_update(slices, prev_slices, False)
             elif any(q in slices_choice for q in ["1","A","a"]):
                 undo_list_update(slices,"",True)
                 past_slices=slices.copy()
-
-                #DEBUG
-                logger("before add slices")
-                logger(str(slices))
-                logger("prev_slices")
-                logger(str(past_slices))
-                logger("before_operation True")
-                #DEBUG
-
                 slices = add_slice(slices,sourceduration)
-
-                #DEBUG
-                logger("after add slices")
-                logger(str(slices))
-                logger("past_slices")
-                logger(str(past_slices))
-                logger("before_operation False")
-                #DEBUG
-
                 undo_list_update(slices, past_slices, False)
             elif any(q in slices_choice for q in ["2","N","n"]):
                 if slices:
@@ -1175,7 +1156,10 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
                     print("Confirm operation (y/n)")
                     sure = getchar()
                     if sure == "y" or sure == "Y" or sure == "":
+                        undo_list_update(slices,"",True)
+                        prev_slices=slices.copy()
                         slices = []
+                        undo_list_update(slices, prev_slices, False)
                 else:
                     print("No defined slice! (Press any key to continue)")
                     getchar()
@@ -1288,14 +1272,11 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
                     slices=undo_list[0]
                     undo_index=0
                 logger("selected state "+ str(undo_index) + "/" + str(len(undo_list)))
-                #logger("### DEBUG undo_list n:" + str(len(undo_list)))
             elif any(q in slices_choice for q in ["12","R","r"]):
-                #logger("DEBUG: len(undo_list) "+ str(len(undo_list)) + ", undo_index " + str(undo_index))
                 if not(len(undo_list) == 0) and undo_index +1 < (len(undo_list)):
                     slices=undo_list[undo_index+1]
                     undo_index=undo_index+1
                 logger("selected state "+ str(undo_index) + "/" + str(len(undo_list)))
-                #logger("### DEBUG undo_list n:" + str(len(undo_list)))
             elif any(q in slices_choice for q in ["13","Q","q"]):
                 slices_loop=True
         return slices
