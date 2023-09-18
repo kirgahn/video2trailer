@@ -9,6 +9,7 @@ import argparse
 import json
 import math
 import subprocess
+#import signal
 
 ## Parse args
 parser = argparse.ArgumentParser()
@@ -33,6 +34,9 @@ parser.add_argument("-s", "--targetsize", help="CURRENTLY UNUSED - Target size i
 args = parser.parse_args()
 
 #### Functions #####
+#def handle_interrupt(signal, frame):
+#    print("Action canceled. (Press any key to continue)")
+#    getchar()
 
 def validate_string(test_str):
         allowed_chars="0123456789.:"
@@ -41,6 +45,7 @@ def validate_string(test_str):
 def time_input():
     #let's define some unicodes
     carriage_return='\x0d'
+    #c_to_cancel='\x63'
     backspace='\x7f'
     erase_line='\x1b[2K'
     cursor_up = '\x1b[1A'
@@ -49,6 +54,7 @@ def time_input():
     while len(char_buffer)<12:
         try:
             char=getchar()
+            #if not char==c_to_cancel:
             if not char==carriage_return:
                 if not char==backspace:
                     if validate_string(char):
@@ -58,17 +64,16 @@ def time_input():
                         if len(char_buffer)==5:
                             char_buffer=char_buffer+":"
                             print(":",end="",flush=True)
-                        #if len(char_buffer)==5:
                         if len(char_buffer)==8:
                             char_buffer=char_buffer+"."
                             print(".",end="",flush=True)
                         char_buffer=char_buffer+char
                         print(char,end="",flush=True)
                 else:
-                                    if len(char_buffer)>=0:
-                                            char_buffer=char_buffer[:-1]
-                                            print(erase_line + cursor_up,flush=True)
-                                            print(char_buffer,end="",flush=True)
+                    if len(char_buffer)>=0:
+                            char_buffer=char_buffer[:-1]
+                            print(erase_line + cursor_up,flush=True)
+                            print(char_buffer,end="",flush=True)
             else:
                 print("\n")
                 if char_buffer[-1:]=="." or char_buffer[-1:]==":":
@@ -328,22 +333,22 @@ def add_slice(slices,sourceduration):
 
     return slices
 
-def remove_slice(slices):
-    try:
-        print("Which slice would you like to remove?")
-        change_index=int(input("#"))
-        if not (change_index > len(slices)):
-            slices.pop(change_index)
-        else:
-            print("Invalid slice position selected. (Press any key to continue)")
-            getchar()
-
-    except ValueError as err:
-        logger("Error: {0}".format(err))
-        print("Error: {0}".format(err))
-        print("Slice position is invalid. (Press any key to continue)")
-        getchar()
-    return slices
+#def remove_slice(slices):
+#    try:
+#        print("Which slice would you like to remove?")
+#        change_index=int(input("#"))
+#        if not (change_index > len(slices)):
+#            slices.pop(change_index)
+#        else:
+#            print("Invalid slice position selected. (Press any key to continue)")
+#            getchar()
+#
+#    except ValueError as err:
+#        logger("Error: {0}".format(err))
+#        print("Error: {0}".format(err))
+#        print("Slice position is invalid. (Press any key to continue)")
+#        getchar()
+#    return slices
 
 def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,keep_first_pass_log,hasaudio):
     try:
@@ -431,142 +436,155 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
         print("Error: {0}".format(err) + " (Press any key to continue)")
         getchar()
 
-def custom_slice(sourcefile, destfile, sourcefps, sourcewidth, sourcebitrate, threads, hasaudio):
-                custom_slice = []
-                custom_slice_quality=""
-                logger("custom slice function called")
+def custom_slice(sourcefile, sourcefps, sourcewidth, sourcebitrate, threads, hasaudio):
+    ### OMFG this function is pukeworthy, needs reviewing!
+    custom_slice = []
+    custom_slice_quality=""
+    logger("custom slice function called")
 
-                custom_name=""
-                ss=0
-                se=0
-                while True:
-                    print("Please insert a name for the output file, previously("+custom_name+")",flush=True)
-                    custom_name_input=input("#")
-                    if len(custom_name_input)>0:
-                        custom_name=custom_name_input
+    custom_name=""
+    ss=0
+    se=0
 
-                    print("Please insert start time for your custom slice, previously("+convert_to_minutes(ss)+")",flush=True)
-                    ss_save=ss
-                    ss_input=convert_to_seconds(time_input())
-                    if float(ss_input) > 0:
-                        ss=float(ss_input)
-                    else:
-                        ss=ss_save
+    while True:
+        print("Please insert a name for the output file, previously("+custom_name+")",flush=True)
+        custom_name_input=input("#")
+        if len(custom_name_input)>0:
+            custom_name=custom_name_input
+            if custom_name.endswith('.webm'):
+                ext=".webm"
+            elif custom_name.endswith('.mp4'):
+                ext=".mp4"
+            else:
+                print("Unknown extension for file \"" + custom_name + "\". (Press any key to continue)")
+                getchar()
+                return
+        else:
+            print("No output filename specified. (Press any key to continue)")
+            getchar()
+            return
 
-                    print("Please insert ending time for your custom slice, previously("+convert_to_minutes(se)+")",flush=True)
-                    se_save=se
-                    se_input=convert_to_seconds(time_input())
-                    if float(se_input) > 0:
-                        se=float(se_input)
-                    else:
-                        se=se_save
+        print("Please insert start time for your custom slice, previously("+convert_to_minutes(ss)+")",flush=True)
+        ss_save=ss
+        ss_input=convert_to_seconds(time_input())
+        if float(ss_input) > 0:
+            ss=float(ss_input)
+        else:
+            ss=ss_save
 
-                    if (float(ss) < sourceduration) and (float(se) < sourceduration):
-                        custom_slice = []
-                        custom_slice.append([ss,se])
-                    else:
-                        print("Slices can't start/end after the end of the source video. (Press any key to continue)")
-                        getchar()
-                        return
+        print("Please insert ending time for your custom slice, previously("+convert_to_minutes(se)+")",flush=True)
+        se_save=se
+        se_input=convert_to_seconds(time_input())
+        if float(se_input) > 0:
+            se=float(se_input)
+        else:
+            se=se_save
 
-                    keep_first_pass_log=False
-                    print("Would you like to encode with full quality, variable or both? (f/v/fv)",flush=True)
-                    custom_slice_quality=input("#")
+        if (float(ss) < sourceduration) and (float(se) < sourceduration):
+            custom_slice = []
+            custom_slice.append([ss,se])
+        else:
+            print("Slices can't start/end after the end of the source video. (Press any key to continue)")
+            getchar()
+            return
 
-                    if custom_slice_quality=="v" or custom_slice_quality=="fv":
-                        print("Please insert a custom width value ("+str(sourcewidth)+"):",flush=True)
-                        custom_width=str(input("#"))
-                        if custom_width == "":
-                            custom_width=sourcewidth
-                        else:
-                            custom_width=int(custom_width)
+        keep_first_pass_log=False
+        print("Would you like to encode with full quality, variable or both? (f/v/fv)",flush=True)
+        custom_slice_quality=input("#")
 
-                    if custom_slice_quality=="v" or custom_slice_quality=="fv":
-                        print("Please insert a custom bitrate value ("+str(sourcebitrate)+"):",flush=True)
-                        custom_bitrate=str(input("#"))
-                        if custom_bitrate=="" :
-                            custom_bitrate=sourcebitrate
+        if custom_slice_quality=="v" or custom_slice_quality=="fv":
+            print("Please insert a custom width value ("+str(sourcewidth)+"):",flush=True)
+            custom_width=str(input("#"))
+            if custom_width == "":
+                custom_width=sourcewidth
+            else:
+                custom_width=int(custom_width)
 
-                    if custom_slice_quality=="v" or custom_slice_quality=="fv":
-                        print("Please insert a custom fps value ("+str(sourcefps)+"):",flush=True)
-                        custom_fps=str(input("#"))
-                        if custom_fps=="" :
-                            custom_fps=sourcefps
+            print("Please insert a custom bitrate value ("+str(sourcebitrate)+"):",flush=True)
+            custom_bitrate=str(input("#"))
+            if custom_bitrate=="" :
+                custom_bitrate=sourcebitrate
 
-                    try:                        
-                        if destfile.endswith('.webm'):
-                            ext=".webm"
-                        elif destfile.endswith('.mp4'):
-                            ext=".mp4"
-                    except:
-                        raise SystemExit("Unknown extension for file \"" + destfile + "\". Quitting now.")
+            print("Please insert a custom fps value ("+str(sourcefps)+"):",flush=True)
+            custom_fps=str(input("#"))
+            if custom_fps=="" :
+                custom_fps=sourcefps
 
-                    path="./custom/"
-                    check_path(path)
+        path="./custom/"
+        check_path(path)
 
-                    custom_start=convert_to_minutes(ss)
-                    custom_start=custom_start.replace(':','.')
-                    padding=custom_start.count('.')
-                    for i in range(1,padding):
-                        custom_start=custom_start.lstrip("0")
-                        custom_start=custom_start.lstrip(".")
-                    custom_start=custom_start.rstrip("0")
-                    custom_start=custom_start.rstrip(".")
+        custom_start=convert_to_minutes(ss)
+        custom_start=custom_start.replace(':','.')
+        padding=custom_start.count('.')
+        for i in range(1,padding):
+            custom_start=custom_start.lstrip("0")
+            custom_start=custom_start.lstrip(".")
+        custom_start=custom_start.rstrip("0")
+        custom_start=custom_start.rstrip(".")
 
-                    custom_end=convert_to_minutes(se)
-                    custom_end=str(custom_end).replace(':','.')
-                    padding=custom_end.count('.')
-                    for i in range(1,padding):
-                        custom_end=custom_end.lstrip("0")
-                        custom_end=custom_end.lstrip(".")
-                    custom_end=custom_end.rstrip("0")
-                    custom_end=custom_end.rstrip(".")
+        custom_end=convert_to_minutes(se)
+        custom_end=str(custom_end).replace(':','.')
+        padding=custom_end.count('.')
+        for i in range(1,padding):
+            custom_end=custom_end.lstrip("0")
+            custom_end=custom_end.lstrip(".")
+        custom_end=custom_end.rstrip("0")
+        custom_end=custom_end.rstrip(".")
 
-                    #### write the full quality webm
-                    if custom_slice_quality=="f":
-                        keep_first_pass_log=False
-                        targetfile=path+custom_name+"_full_"+custom_start+"_"+custom_end+"_"+str(sourcewidth)+"x"+str(sourceheight)+ext
-                        logger("writing full quality custom slice with the following encoding parameters:\nname: "+custom_name+"\nstarting position: "+str(convert_to_minutes(ss))+"\nending time: "+str(convert_to_minutes(se))+"\nfps: "+str(sourcefps)+"\nresolution: "+str(sourcewidth)+"x"+str(sourceheight)+"\nbitrate: "+str(sourcebitrate)+"\nthreads: "+str(threads))
-                        ffmpeg_write_vo(sourcefile,custom_slice,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,keep_first_pass_log,hasaudio)
-                    elif custom_slice_quality=="v":
-                        keep_first_pass_log=False
-                        #### find correct height value given the originl aspect ratio
-                        custom_height=calculate_height(custom_width,sourcewidth,sourceheight)
-                        targetfile=path+custom_name+"_variable_"+custom_start+"_"+custom_end+"_"+str(custom_width)+"x"+str(custom_height)+ext
-                        keep_first_pass_log=False
-                        logger("writing variable quality custom slice with the following encoding parameters:\nname: "+custom_name+"\nstarting position: "+str(convert_to_minutes(ss))+",\nending time: "+str(convert_to_minutes(se))+"\nfps: "+str(custom_fps)+"\nresolution: "+str(custom_width)+"x"+str(custom_height)+"\nbitrate: "+str(custom_bitrate)+"\nthreads: "+str(threads))
+        #### write the full quality webm
+        if custom_slice_quality=="f":
+            keep_first_pass_log=False
+            targetfile=path+custom_name+"_full_"+custom_start+"_"+custom_end+"_"+str(sourcewidth)+"x"+str(sourceheight)+ext
+            logger("writing full quality custom slice with the following encoding parameters:\nname: "+custom_name+"\nstarting position: "+str(convert_to_minutes(ss))+"\nending time: "+str(convert_to_minutes(se))+"\nfps: "+str(sourcefps)+"\nresolution: "+str(sourcewidth)+"x"+str(sourceheight)+"\nbitrate: "+str(sourcebitrate)+"\nthreads: "+str(threads))
+            ffmpeg_write_vo(sourcefile,custom_slice,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,keep_first_pass_log,hasaudio)
+        elif custom_slice_quality=="v":
+            keep_first_pass_log=False
+            #### find correct height value given the originl aspect ratio
+            custom_height=calculate_height(custom_width,sourcewidth,sourceheight)
+            targetfile=path+custom_name+"_variable_"+custom_start+"_"+custom_end+"_"+str(custom_width)+"x"+str(custom_height)+ext
+            keep_first_pass_log=False
+            logger("writing variable quality custom slice with the following encoding parameters:\nname: "+custom_name+"\nstarting position: "+str(convert_to_minutes(ss))+",\nending time: "+str(convert_to_minutes(se))+"\nfps: "+str(custom_fps)+"\nresolution: "+str(custom_width)+"x"+str(custom_height)+"\nbitrate: "+str(custom_bitrate)+"\nthreads: "+str(threads))
 
-                        ffmpeg_write_vo(sourcefile,custom_slice,targetfile,custom_fps,custom_width,custom_height,custom_bitrate,threads,keep_first_pass_log,hasaudio)
+            ffmpeg_write_vo(sourcefile,custom_slice,targetfile,custom_fps,custom_width,custom_height,custom_bitrate,threads,keep_first_pass_log,hasaudio)
 
-                        targetfile=path+custom_name+"_full_"+custom_start+"_"+custom_end+"_"+str(sourcewidth)+"x"+str(sourceheight)+ext
-                    elif custom_slice_quality=="fv":
-                        logger("writing full quality custom slice with the following encoding parameters:\nname: "+custom_name+"\nstarting position: "+str(convert_to_minutes(ss))+"\nending time: "+str(convert_to_minutes(se))+"\nfps: "+str(sourcefps)+"\nresolution: "+str(sourcewidth)+"x"+str(sourceheight)+"\nbitrate: "+str(sourcebitrate)+"\nthreads: "+str(threads))
+            targetfile=path+custom_name+"_full_"+custom_start+"_"+custom_end+"_"+str(sourcewidth)+"x"+str(sourceheight)+ext
+        elif custom_slice_quality=="fv":
+            logger("writing full quality custom slice with the following encoding parameters:\nname: "+custom_name+"\nstarting position: "+str(convert_to_minutes(ss))+"\nending time: "+str(convert_to_minutes(se))+"\nfps: "+str(sourcefps)+"\nresolution: "+str(sourcewidth)+"x"+str(sourceheight)+"\nbitrate: "+str(sourcebitrate)+"\nthreads: "+str(threads))
 
-                        targetfile=path+custom_name+"_full_"+custom_start+"_"+custom_end+"_"+str(sourcewidth)+"x"+str(sourceheight)+ext
-                        keep_first_pass_log=True
-                        ffmpeg_write_vo(sourcefile,custom_slice,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,keep_first_pass_log,hasaudio)
-                        #### find correct height value given the originl aspect ratio
-                        custom_height=calculate_height(custom_width,sourcewidth,sourceheight)
-                        targetfile=path+custom_name+"_variable_"+custom_start+"_"+custom_end+"_"+str(custom_width)+"x"+str(custom_height)+ext
-                        keep_first_pass_log=False
-                        logger("writing variable quality custom slice with the following encoding parameters:\nname: "+custom_name+"\nstarting position: "+str(convert_to_minutes(ss))+",\nending time: "+str(convert_to_minutes(se))+"\nfps: "+str(custom_fps)+"\nresolution: "+str(custom_width)+"x"+str(custom_height)+"\nbitrate: "+str(custom_bitrate)+"\nthreads: "+str(threads))
+            targetfile=path+custom_name+"_full_"+custom_start+"_"+custom_end+"_"+str(sourcewidth)+"x"+str(sourceheight)+ext
+            keep_first_pass_log=True
+            ffmpeg_write_vo(sourcefile,custom_slice,targetfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,keep_first_pass_log,hasaudio)
+            #### find correct height value given the originl aspect ratio
+            custom_height=calculate_height(custom_width,sourcewidth,sourceheight)
+            targetfile=path+custom_name+"_variable_"+custom_start+"_"+custom_end+"_"+str(custom_width)+"x"+str(custom_height)+ext
+            keep_first_pass_log=False
+            logger("writing variable quality custom slice with the following encoding parameters:\nname: "+custom_name+"\nstarting position: "+str(convert_to_minutes(ss))+",\nending time: "+str(convert_to_minutes(se))+"\nfps: "+str(custom_fps)+"\nresolution: "+str(custom_width)+"x"+str(custom_height)+"\nbitrate: "+str(custom_bitrate)+"\nthreads: "+str(threads))
 
-                        ffmpeg_write_vo(sourcefile,custom_slice,targetfile,custom_fps,custom_width,custom_height,custom_bitrate,threads,keep_first_pass_log,hasaudio)
-                    print("(p) to play the file, (r) to remove the file, (q) to resume editing, (t) to retry",flush=True)
-                    while True:
-                        confirm=getchar()
-                        if confirm == "p" or confirm == "P":
-                            xdg_open(targetfile)
-                        elif confirm == "r" or confirm == "R":
-                            os.system("rm " + "\'" + targetfile + "\'")
-                        elif confirm == "q" or confirm == "Q":
-                            break
-                        elif confirm == "t" or confirm == "T":
-                            break
-                    if confirm == "q" or confirm == "Q":
-                        break
-                    if confirm == "t" or confirm == "T":
-                        continue
+            ffmpeg_write_vo(sourcefile,custom_slice,targetfile,custom_fps,custom_width,custom_height,custom_bitrate,threads,keep_first_pass_log,hasaudio)
+        else:
+            print("No encoding quality profile selected, exiting... (press any key to continue)",flush=True)
+            getchar()
+            return
+
+        print("(p) to play the file, (r) to remove the file, (q) to resume editing, (t) to retry",flush=True)
+        while True:
+            confirm=getchar()
+            if confirm == "p" or confirm == "P":
+                xdg_open(targetfile)
+            elif confirm == "r" or confirm == "R":
+                if os.path.exists(targetfile):
+                    os.system("rm " + "\'" + targetfile + "\'")
+                    print("Encoded file " + targetfile + " succesfully removed. (Press any key to continue)")
+                    getchar()
+                    return
+            elif confirm == "q" or confirm == "Q":
+                break
+            elif confirm == "t" or confirm == "T":
+                break
+        if confirm == "q" or confirm == "Q":
+            break
+        if confirm == "t" or confirm == "T":
+            continue
 
 def legacy_write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheight,sourcebitrate,threads,hasaudio):
     #logger("DEBUG: write_all_slices - hasaudio: "+str(hasaudio))
@@ -747,7 +765,11 @@ def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
         if confirm == "p" or confirm == "P":
             xdg_open(preview_file)
         elif confirm == "r" or confirm == "R":
-            os.system("rm " + "\'" + preview_file + "\'")
+            if os.path.exists(preview_file):
+                os.system("rm " + "\'" + preview_file + "\'")
+                print("Encoded file " + preview_file + " succesfully removed. (Press any key to continue)")
+                getchar()
+                return
         elif confirm == "q" or confirm == "Q":
             break
 
@@ -931,15 +953,11 @@ def undo_list_update(slices,prev_slices,before_operation):
                 undo_list.append(slices.copy())
                 undo_index=undo_index+1
         elif len(undo_list) == 0 and len(slices) > 0:
-            #undo_list.append(next(reversed(slices)))
             undo_list.append(slices.copy())
             undo_index=undo_index+1
     else:
         if not prev_slices == slices:
-            #undo_list.append(next(reversed(slices)))
             undo_list.append(slices.copy())
-            #for i in range(len(slices)):
-            #    undo_list[undo_index][i]=slices[i]
             undo_index=undo_index+1
 
 #### Edit slices with an external editor ####
@@ -1133,16 +1151,18 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
                         new_slices=scene_analyzer(sourcefile,outputlenght,sourceduration,analyzerthreshold,analyzeskipahead,analyzetrimend,3,analyzerdoublescenes)
                 if new_slices:
                     slices = new_slices
-                    tmpfile=state_path + destfile+str(random.randint(0,1024))+".edit.v2t"
                     write_tmpstatefile(slices)
                 undo_list_update(slices, prev_slices, False)
             elif any(q in slices_choice for q in ["1","A","a"]):
+                #try:
                 undo_list_update(slices,"",True)
                 past_slices=slices.copy()
                 slices = add_slice(slices,sourceduration)
                 undo_list_update(slices, past_slices, False)
-                tmpfile=state_path + destfile+str(random.randint(0,1024))+".edit.v2t"
-                write_tmpstatefile(slices)
+                if len(slices)>0:
+                    write_tmpstatefile(slices)
+                #except KeyboardInterrupt:
+                #    handle_interrupt(None, None)
             elif any(q in slices_choice for q in ["2","N","n"]):
                 if slices:
                     path="./slices/"
@@ -1208,7 +1228,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
                     getchar()
 
             elif any(q in slices_choice for q in ["7","C","c"]):
-                custom_slice(sourcefile, destfile, sourcefps, sourcewidth, sourcebitrate, threads, hasaudio)
+                custom_slice(sourcefile, sourcefps, sourcewidth, sourcebitrate, threads, hasaudio)
             elif any(q in slices_choice for q in ["8","W","w"]):
                 if slices:
                     if destfile.endswith('.mp4'):
@@ -1234,7 +1254,11 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
                                 if confirm == "p" or confirm == "P":
                                     xdg_open(targetfile)
                                 elif confirm == "r" or confirm == "R":
-                                    os.system("rm " + "\'" + targetfile + "\'")
+                                    if os.path.exists(targetfile):
+                                        os.system("rm " + "\'" + targetfile + "\'")
+                                        print("Encoded file " + targetfile + " succesfully removed. (Press any key to continue)")
+                                        getchar()
+                                        return
                                 elif confirm == "q" or confirm == "Q":
                                     break
                         keep_first_pass_log=False
@@ -1256,7 +1280,11 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
                             if confirm == "p" or confirm == "P":
                                 xdg_open(targetfile)
                             elif confirm == "r" or confirm == "R":
-                                os.system("rm " + "\'" + targetfile + "\'")
+                                if os.path.exists(targetfile):
+                                    os.system("rm " + "\'" + targetfile + "\'")
+                                    print("Encoded file " + targetfile + " succesfully removed. (Press any key to continue)")
+                                    getchar()
+                                    return
                             elif confirm == "q" or confirm == "Q":
                                 break
 
@@ -1473,6 +1501,8 @@ write_custom_quality=True
 legacy_write_slices=False
 
 sourcefile = args.sourcefile
+
+#signal.signal(signal.SIGINT, handle_interrupt)
 
 logger("Starting video2trailer, sourcefile is: " + sourcefile)
 
