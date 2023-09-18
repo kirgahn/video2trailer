@@ -314,7 +314,11 @@ def add_slice(slices,sourceduration):
         se=convert_to_seconds(time_input())
 
         if (float(ss) < sourceduration) and (float(se) < sourceduration):
-            slices.append([ss,se])
+            if (float(se)-float(ss) > 0):
+                slices.append([ss,se])
+            else:
+                print("Slices can't have a negative value. (Press any key to continue)")
+                getchar()
         else:
             print("Slices can't start/end after the end of the source video. (Press any key to continue)")
             getchar()
