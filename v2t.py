@@ -925,7 +925,11 @@ def save_state(sourcefile,destfile,fps,width,bitrate,threads,target_size,slices,
 def write_tmpstatefile(slices):
     global state_path
     check_path(state_path)
-    tmp_state_file=state_path + destfile+str(random.randint(0,1024))+".edit.v2t"
+    
+    now=datetime.now()
+    now=now.strftime('%Y%m%d-%H%M%S%f')[:-3]
+    
+    tmp_state_file=state_path + destfile+"_"+str(now)+".edit.v2t"
     try:
         with open(tmp_state_file,mode='w', encoding='utf-8') as state_file:
             for i in range(len(slices)):
