@@ -13,7 +13,7 @@ dependecies(***):
 
 *** some dependencies might not be listed
 
-# examples
+# CLI examples:
 
 - interactively edit a video
 
