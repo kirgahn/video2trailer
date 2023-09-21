@@ -1512,10 +1512,10 @@ title = "|| video2trailer ||"
 player_width=round(int(get_screen_width())/2)
 if player_width == 1:
     #player="mplayer -zoom -osd-fractions 1 -osdlevel 3 -really-quiet"
-    player="mpv --video-unscaled -osd-fractions 1 -osdlevel 3 -really-quiet"
+    player="mpv -osd-fractions 1 -osdlevel 3 -really-quiet"
 else:
     #player="mplayer -xy " + str(player_width) + " -geometry 100%:0% -zoom -osd-fractions 1 -osdlevel 3 -really-quiet"
-    player="mpv --autofit=" + str(player_width) + " -geometry 100%:0% --video-unscaled -osd-fractions 1 -osdlevel 3 -really-quiet"
+    player="mpv --autofit=" + str(player_width) + " -geometry 100%:0% -osd-fractions 1 -osdlevel 3 -really-quiet"
     
 player_extra_opts="-loop 0 &>/dev/null &"
 editor="vim"
