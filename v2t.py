@@ -223,31 +223,45 @@ def print_separator():
     print("=" * columns)
 
 #### generate random slices ####
-def generate_slices(sourceduration, duration, sliceduration):
+def generate_slices(sourceduration, nslices, output_duration, analyzeskipahead, analyzetrimend):
     slices = []
     try:
-        if duration == 0:
-            print("Please select the overall duration for the clip in seconds")
-            duration=int(input("# "))
+        if float(convert_to_seconds(analyzeskipahead))==0:
+            prevpos = 0
+        else:
+            prevpos=float(convert_to_seconds(analyzeskipahead))
 
-            print("Please select the duration for each slice in seconds")
-            sliceduration=int(input("# "))
-        logger("Generating slices with overall clip duration of " + str(duration) + " secs and slice duration of " + str(sliceduration)+ " secs" )
+        if float(convert_to_seconds(analyzetrimend))==0:
+            time_limit=sourceduration
+        else:
+            time_limit=float(convert_to_seconds(analyzetrimend))
 
-        prevpos = 0
-        cycles = duration/sliceduration
-        #print("DEBUG duration: "+str(duration)+", sliceduration: "+str(sliceduration)+", cycles: "+str(cycles))
+        if prevpos==0 and float(convert_to_seconds(analyzetrimend))==0:
+            cut_source_duration=sourceduration
+        elif prevpos > 0 and float(convert_to_seconds(analyzetrimend)) > 0:
+            cut_source_duration=float(convert_to_seconds(analyzetrimend))-prevpos
+        elif prevpos == 0 and float(convert_to_seconds(analyzetrimend)) > 0:
+            cut_source_duration=sourceduration-(sourceduration-float(convert_to_seconds(analyzetrimend)))
+        elif prevpos > 0 and float(convert_to_seconds(analyzetrimend)) == 0:
+            cut_source_duration=sourceduration-float(convert_to_seconds(analyzeskipahead))
+
+        #print("DEBUG cut_source_duration: "+str(cut_source_duration))
+        sliceduration=round(output_duration/nslices,2)
+        cycles = output_duration/sliceduration
         step = 100/cycles
         s=1
         n=1
 
-        while n <= cycles and ((int(prevpos))+sliceduration < int(sourceduration)):
-            s = random.randint(round(prevpos+sliceduration),round(int(sourceduration)/100*(n*step)))
+        logger("Generating slices with overall clip duration of " + str(output_duration) + " secs and slice duration of " + str(sliceduration)+ " secs" )
+        #print("DEBUG: sourceduration: "+ str(sourceduration) +", cut_source_duration: " + str(cut_source_duration) +", timelimit: " + str(time_limit) + ", prevpos/analyzeskipahead:" + str(prevpos) +", analyzetrimend:" + str(float(convert_to_seconds(analyzetrimend))) + ", cycles:" + str(cycles))
+        while n <= cycles and ((int(prevpos))+sliceduration < int(time_limit)):
+            s = random.randint(round(prevpos+sliceduration),round(float(convert_to_seconds(analyzeskipahead))+int(cut_source_duration)/100*(n*step)))
             prevpos = s
             slices.append([s,s+sliceduration])
+            #print("DEBUG: slices:" + str(slices))
             n = n + 1
+
         logger("Generated " + str(len(slices)) + " slices")
-        #print("DEBUG: Generated " + str(len(slices)) + " slices")
         return slices
     except (OSError, ValueError) as err:
         logger("Error: {0}".format(err))
@@ -365,8 +379,6 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
             ext="mp4"
         else:
             raise SystemExit("Unknown extension for file \"" + destfile + "\". Quitting now." )
-
-        #print("DEBUG: Destfile: "+ destfile +", ext: " + ext)
 
         #### with libvpx options
         ffmpeg_command="ffmpeg -stats -v quiet -i " + "\'" + sourcefile + "\'" + " -y -r " + str(sourcefps) + " -codec:v " + encoder + quality_opts + " -s " + str(sourcewidth) + "x" + str(sourceheight) + " -c:a " + audiolib + " -q 0 -threads " + str(threads) + " -filter_complex \""
@@ -1117,7 +1129,22 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
                 scdet_algorithm = getchar()
                 if scdet_algorithm == "s" or scdet_algorithm == "S":
                     new_slices=[]
-                    new_slices = generate_slices(sourceduration, 0, 0)
+
+                    print("Please select the overall duration for the clip in seconds")
+                    output_duration=int(input("# "))
+
+                    print("Please select the number of desired slices")
+                    nslices=int(input("# "))
+                
+                    print("At which time would you like scene selection to begin? (default: 00:00:00.000):")
+                    analyzeskipahead=time_input()
+
+                    print("At which time would you like scene detection to end? (default: ending of the video (" + convert_to_minutes(sourceduration) + ")):")
+                    analyzetrimend=time_input()
+                    if analyzetrimend=="0":
+                        analyzetrimend=convert_to_minutes(sourceduration)
+
+                    new_slices = generate_slices(sourceduration, nslices, output_duration, analyzeskipahead, analyzetrimend)
                 else:
                     # collect all the params for the other algorithms
                     print("Please select the overall duration for the clip in seconds:")
@@ -1341,11 +1368,11 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
         print("Error: {0}".format(err) + " (Press any key to continue)")
         getchar()
 
-def generate_autotrailer(sourcefile, destfile, sourcewidth, sourceheight, fps, width, bitrate, threads, target_size, nslices, outputlenght, sourceduration, hasaudio, analyzerstatefile):
+def generate_autotrailer(sourcefile, destfile, sourcewidth, sourceheight, fps, width, bitrate, threads, target_size, nslices, outputlenght, sourceduration, hasaudio, analyzeskipahead, analyzetrimend, analyzerstatefile):
     print("sourceduration: "+str(sourceduration)+", outputlenght: "+str(outputlenght))
-    if sourceduration > 0 and outputlenght < sourceduration:
-        sliceduration=round(outputlenght/nslices,2)
-        slices=generate_slices(sourceduration, outputlenght, sliceduration)
+    overall_lenght=sourceduration-float(convert_to_seconds(analyzeskipahead))-float(convert_to_seconds(analyzetrimend))
+    if sourceduration > 0 and overall_lenght <= sourceduration:
+        slices=generate_slices(sourceduration, nslices, outputlenght, analyzeskipahead, analyzetrimend)
 
         logger("generating autotrailer...")
         height=calculate_height(width,sourcewidth,sourceheight)
@@ -1460,9 +1487,9 @@ def scene_analyzer(sourcefile,outputlenght,sourceduration,analyzerthreshold,anal
 def generate_sceneanalyzer_autotrailer(sourcefile, destfile, sourcewidth, sourceheight, fps, width, bitrate, threads, target_size, outputlenght, sourceduration, hasaudio, analyzerthreshold, analyzeskipahead, analyzetrimend,sceneanalyzer,analyzerdoublescenes,analyzerstatefile, is_autotrailer):
     logger("generating scene analyzer autotrailer...")
     sourceduration_skipahead=float(sourceduration)-float(convert_to_seconds(analyzeskipahead))
-    logger("sourceduration: "+str(sourceduration)+", considering skipahead: "+str(sourceduration_skipahead)+", outputlenght: "+str(outputlenght))
+    logger("sourceduration: "+str(sourceduration)+", skipahead: "+str(sourceduration_skipahead)+", output lenght: "+str(outputlenght))
     if sourceduration_skipahead > 0 and outputlenght < sourceduration_skipahead:
-        slices=scene_analyzer(sourcefile,outputlenght,sourceduration,analyzerthreshold,analyzeskipahead,analyzetrimend,sceneanalyzer,analyzerdoublescenes,"00:01:00", is_autotrailer)
+        slices=scene_analyzer(sourcefile,outputlenght,sourceduration,analyzerthreshold,analyzeskipahead,analyzetrimend,sceneanalyzer,analyzerdoublescenes,"00:00:30", is_autotrailer)
 
         height=calculate_height(width,sourcewidth,sourceheight)
         keep_first_pass_log=False
@@ -1601,7 +1628,8 @@ else:
             sys.exit()
         elif outputlenght > 0 and nslices > 0:
             logger("calling autotrailer")
-            generate_autotrailer(sourcefile, destfile, sourcewidth, sourceheight, fps, width, bitrate, threads, target_size, nslices, outputlenght, sourceduration, hasaudio, analyzerstatefile)
+            #add analyzeskipahead, analyzetrimend, analyzerdoublescenes to simple autotrailer
+            generate_autotrailer(sourcefile, destfile, sourcewidth, sourceheight, fps, width, bitrate, threads, target_size, nslices, outputlenght, sourceduration, hasaudio, analyzeskipahead, analyzetrimend, analyzerstatefile)
             sys.exit()
         else:
             print("When using -a (autotrailer) you must specify at least the number of slices (-n) or a scene analyzer (-z) and the target video duration (-l). Quitting...")
