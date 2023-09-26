@@ -215,6 +215,11 @@ def print_title():
 def calculate_height(width,sourcewidth,sourceheight):
     ratio=sourcewidth/sourceheight
     height=round(width/ratio)
+    mod = height % 2
+    if mod > 0:
+        logger("calculated height is odd, removing one pixel line to make it even")
+        if height > 0:
+            height=height-1
     return height
 
 #### draw a separator ####
@@ -507,7 +512,13 @@ def custom_slice(sourcefile, sourcefps, sourcewidth, sourcebitrate, threads, has
         if custom_slice_quality=="v" or custom_slice_quality=="fv":
             print("Please insert a custom width value ("+str(sourcewidth)+"):",flush=True)
             custom_width=str(input("#"))
+            mod = custom_width % 2
+
             if custom_width == "":
+                custom_width=sourcewidth
+            elif mod > 0:
+                print("Width must be an even number. (Press any key to continue)")
+                getchar()
                 custom_width=sourcewidth
             else:
                 custom_width=int(custom_width)
@@ -820,9 +831,18 @@ def change_settings(destfile,fps,width,bitrate,threads,target_size,write_full_qu
                 if new_fps:
                     fps=int(new_fps)
             elif any(q in settings_choice for q in ["3","W","w"]):
-                new_width = input("width: ")
-                if new_width:
-                    width=int(new_width)
+                custom_width = input("width: ")
+                if custom_width == "":
+                    width=sourcewidth
+                else:
+                    custom_width=int(custom_width)
+                    if custom_width > 0:
+                        mod = custom_width % 2
+                        if mod > 0:
+                            print("Width must be an even number. (Press any key to continue)")
+                            getchar()
+                        else:
+                            width=custom_width
             elif any(q in settings_choice for q in ["4","B","b"]):
                 new_bitrate = input("bitrate: ")
                 if new_bitrate:
