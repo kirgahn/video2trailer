@@ -750,7 +750,7 @@ def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
     preview_file=destfile + "." + file_ext
 
     font="DejaVuSans-Bold.ttf"
-    fontsize=100
+    fontsize=round((480*10)/100)
     opts=" -cpu-used 8 -threads " + str(threads)
     
     vo_slices = []
