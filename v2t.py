@@ -1535,7 +1535,7 @@ if player_width == 1:
     player="mpv -osd-fractions 1 -osdlevel 3 -really-quiet"
 else:
     #player="mplayer -xy " + str(player_width) + " -geometry 100%:0% -zoom -osd-fractions 1 -osdlevel 3 -really-quiet"
-    player="mpv --autofit=" + str(player_width) + " -geometry 100%:0% -osd-fractions 1 -osdlevel 3 -really-quiet"
+    player="mpv --autofit=" + str(player_width) + " --no-input-terminal -geometry 100%:0% -osd-fractions 1 -osdlevel 3 -really-quiet"
     
 player_extra_opts="-loop 0 &>/dev/null &"
 editor="vim"
