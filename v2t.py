@@ -42,6 +42,19 @@ def validate_string(test_str):
         allowed_chars="0123456789.:"
         return all(i in allowed_chars for i in test_str)
 
+def play_sound():
+    soundplayer="aplay"
+    soundfile="/usr/share/sounds/sound-icons/prompt.wav"
+    ### test if aplay exists
+    rc = subprocess.call(['which',soundplayer], stdout=open(os.devnull, 'wb'))
+    if rc == 0:
+        ### test if the sound file exists
+        if os.path.exists(soundfile):
+            command=soundplayer + " -q " + soundfile
+            #os.system(command)
+            os.popen(command)
+            #subprocess.call(ffmpeg_command)
+
 def time_input():
     #let's define some unicodes
     carriage_return='\x0d'
@@ -443,6 +456,7 @@ def ffmpeg_write_vo(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheigh
         #else:
         #    logger("keeping first pass log ffmpeg2pass-0.log for further encoding")
 
+        play_sound()
         end_time=time.time()
         elapsed_time=convert_to_minutes(end_time-start_time)
         logger("Encoding done, elapsed time with " + str(threads) + " threads is: " + elapsed_time)
@@ -674,6 +688,7 @@ def legacy_write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sou
                 print("Error: {0}".format(err) + " (Press any key to continue)")
                 getchar()
 
+            play_sound()
             end_time=time.time()
             elapsed_time=convert_to_minutes(end_time-start_time)
             logger("Encoding done, elapsed time with " + str(threads) + " threads is: " + elapsed_time)
@@ -730,6 +745,7 @@ def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheig
             print("Error: {0}".format(err) + " (Press any key to continue)")
             getchar()
 
+        play_sound()
         end_time=time.time()
         elapsed_time=convert_to_minutes(end_time-start_time)
         logger("Encoding done, elapsed time with " + str(threads) + " threads is: " + elapsed_time)
@@ -777,6 +793,7 @@ def write_preview(sourcefile,slices,destfile,fps,height,width,sourceheight,bitra
 
     subprocess.call(ffmpeg_command,shell=True)
 
+    play_sound()
     end_time=time.time()
     elapsed_time=convert_to_minutes(end_time-start_time)
     logger("Encoding preview file done, elapsed time with " + str(threads) + " threads is: " + elapsed_time)
