@@ -43,14 +43,15 @@ def validate_string(test_str):
         return all(i in allowed_chars for i in test_str)
 
 def play_sound():
-    soundplayer="aplay"
-    soundfile="/usr/share/sounds/sound-icons/prompt.wav"
+    soundplayer="mpv"
+    soundplayer_opts="  --really-quiet "
+    soundfile="/usr/share/sounds/freedesktop/stereo/complete.oga"
     ### test if aplay exists
     rc = subprocess.call(['which',soundplayer], stdout=open(os.devnull, 'wb'))
     if rc == 0:
         ### test if the sound file exists
         if os.path.exists(soundfile):
-            command=soundplayer + " -q " + soundfile
+            command=soundplayer + soundplayer_opts + soundfile
             #os.system(command)
             os.popen(command)
             #subprocess.call(ffmpeg_command)
