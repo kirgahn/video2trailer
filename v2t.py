@@ -742,7 +742,7 @@ def write_all_slices(sourcefile,slices,destfile,sourcefps,sourcewidth,sourceheig
         print("Error: {0}".format(err) + " (Press any key to continue)")
         getchar()
 
-def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
+def write_preview(sourcefile,slices,destfile,fps,height,width,sourceheight,bitrate,threads):
     encoder="libx264"
     audio_encoder="aac"
     file_ext="mp4"
@@ -750,7 +750,7 @@ def write_preview(sourcefile,slices,destfile,fps,height,width,bitrate,threads):
     preview_file=destfile + "." + file_ext
 
     font="DejaVuSans-Bold.ttf"
-    fontsize=round((480*10)/100)
+    fontsize=round((sourceheight*10)/100)
     opts=" -cpu-used 8 -threads " + str(threads)
     
     vo_slices = []
@@ -1273,7 +1273,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
                         subslice.append(slices[which_slice])
                         tempfile=destfile+str(random.randint(0,1024))
                         preview_height=calculate_height(640,sourcewidth,sourceheight)
-                        write_preview(sourcefile,subslice,tempfile,24,preview_height,640,"1.6M",threads)
+                        write_preview(sourcefile,subslice,tempfile,24,preview_height,640,sourceheight,"1.6M",threads)
                     except (ValueError, OSError) as err:
                         logger("Error: {0}".format(err))
                         print("Error: {0}".format(err) + " (Press any key to continue)")
@@ -1289,7 +1289,7 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
                         check_path(path)
                         tempfile=path+destfile+str(random.randint(0,1024))
                         preview_height=calculate_height(640,sourcewidth,sourceheight)
-                        write_preview(sourcefile,slices,tempfile,24,preview_height,640,"1.6M",threads)
+                        write_preview(sourcefile,slices,tempfile,24,preview_height,640,sourceheight,"1.6M",threads)
                     except (ValueError, OSError) as err:
                         logger("Error: {0}".format(err))
                         print("Error: {0}".format(err) + " (Press any key to continue)")
