@@ -1068,7 +1068,7 @@ def load_prev_statefile(prev_state_file):
         getchar()
 
 def youtube_dl_get_url(sourcefile):
-    command='youtube-dl -q --no-warnings -f best -g \'' + sourcefile + '\''
+    command='yt-dlp -q --no-warnings -f best -g \'' + sourcefile + '\''
     logger("Extracting video URL info with command: " + command)
     sourcefile = subprocess.getoutput(command)
     logger("Extracted video URL is: " + sourcefile)
