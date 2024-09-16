@@ -44,7 +44,7 @@ def validate_string(test_str):
 
 def play_sound():
     soundplayer="mpv"
-    soundplayer_opts="  --really-quiet "
+    soundplayer_opts=" --really-quiet "
     soundfile="/usr/share/sounds/freedesktop/stereo/complete.oga"
     ### test if aplay exists
     rc = subprocess.call(['which',soundplayer], stdout=open(os.devnull, 'wb'))
@@ -1550,12 +1550,12 @@ title = "|| video2trailer ||"
 player_width=round(int(get_screen_width())/2)
 if player_width == 1:
     #player="mplayer -zoom -osd-fractions 1 -osdlevel 3 -really-quiet"
-    player="mpv -osd-fractions 1 -osdlevel 3 -really-quiet"
+    player="mpv --loop --osd-fractions  --osd-level=3 --really-quiet"
 else:
     #player="mplayer -xy " + str(player_width) + " -geometry 100%:0% -zoom -osd-fractions 1 -osdlevel 3 -really-quiet"
-    player="mpv --autofit=" + str(player_width) + " --no-input-terminal -geometry 100%:0% -osd-fractions 1 -osdlevel 3 -really-quiet"
+    player="mpv --autofit=" + str(player_width) + " --loop --no-input-terminal --geometry=100%:0% --osd-fractions --osd-level=3 --really-quiet"
     
-player_extra_opts="-loop 0 &>/dev/null &"
+player_extra_opts=" &>/dev/null &"
 editor="vim"
 state_path="./states/"
 
