@@ -1,17 +1,19 @@
 # video2trailer
-* v2t is a simple command line non-linear video editor used to edit a video file and generate webms (using VP8 for legacy reasons)
+* v2t is a simple command line non-linear video editor used to edit a video file and (auto)generate trailers/cuts in webm (using VP8) or mp4 (using H264)
 * v2f is a simple bash script used to generate a preview filmstrip out of a video file
 
-dependecies(***):
+# dependecies:
 * python3
+* vim
 * ffmpeg
 * imagemagik
-* mplayer
+* mpv
 * feh
-* youtube-dl
+* yt-dlp
 * pySceneDetect
 
-*** some dependencies might not be listed
+pySceneDetect can be installed with the following command:
+```pip install scenedetect```
 
 # CLI examples:
 
@@ -35,7 +37,7 @@ dependecies(***):
 
 ```v2t -a -l 30 -z 2 -zt 10 -zs 00:14:20 -ze 00:20:20 -d test.webm my_video.mp4```
 
-- create a test pictures showing the scenes detected with scdet and the above settings:
+- create a test picture showing the scenes detected with scdet using the above settings:
 
 ```ffmpeg -f lavfi -ss 00:14:20 -to 00:26:40 -i "movie=my_video.mp4,scdet=s=1:t=10" -vf "scale=160:-1,tile=6x85" -frames:v 1 -qscale:v 3 preview.jpg```
 
