@@ -1436,13 +1436,28 @@ def generate_autotrailer(sourcefile, destfile, sourcewidth, sourceheight, fps, w
 def scene_analyzer(sourcefile,outputlenght,sourceduration,analyzerthreshold,analyzeskipahead,analyzetrimend,sceneanalyzer,analyzerdoublescenes,min_scene_len,is_autotrailer):
     if sceneanalyzer == 1:
         #ffmpeg gt scene detect
-        ffmpeg_command="ffmpeg -nostdin -ss "+ str(analyzeskipahead) +" -to " + analyzetrimend +" -i \""+sourcefile+"\" -max_muxing_queue_size 9999999 -filter:v \"select='gt(scene,"+str(analyzerthreshold)+")',showinfo\" -f null - 2>\""+sourcefile+".sceneanalyzer\""
+        ffmpeg_command="ffmpeg -nostdin"
+        if float(convert_to_seconds(analyzeskipahead)) > 0:
+            ffmpeg_command=ffmpeg_command + " -ss "+ str(analyzeskipahead)
+        if float(convert_to_seconds(analyzetrimend)) > 0:
+            ffmpeg_command=ffmpeg_command + " -to " + analyzetrimend 
+        ffmpeg_command=ffmpeg_command + " -i \""+sourcefile+"\" -max_muxing_queue_size 9999999 -filter:v \"select='gt(scene,"+str(analyzerthreshold)+")',showinfo\" -f null - 2>\""+sourcefile+".sceneanalyzer\""
     elif sceneanalyzer == 2:
         #ffmpeg lavfi scdet
-        ffmpeg_command="ffmpeg -nostdin -f lavfi -ss "+analyzeskipahead+" -to "+analyzetrimend+" -i \"movie="+sourcefile+",scdet=s=1:t="+str(float(analyzerthreshold))+"\" -max_muxing_queue_size 9999999 -vf \"showinfo\" -f null - 2>\""+sourcefile+".sceneanalyzer\""
+        ffmpeg_command="ffmpeg -nostdin -f lavfi"
+        if float(convert_to_seconds(analyzeskipahead)) > 0:
+            ffmpeg_command=ffmpeg_command + " -ss "+ str(analyzeskipahead)
+        if float(convert_to_seconds(analyzetrimend)) > 0:
+            ffmpeg_command=ffmpeg_command + " -to " + analyzetrimend 
+        ffmpeg_command=ffmpeg_command +" -i \"movie="+sourcefile+",scdet=s=1:t="+str(float(analyzerthreshold))+"\" -max_muxing_queue_size 9999999 -vf \"showinfo\" -f null - 2>\""+sourcefile+".sceneanalyzer\""
     elif sceneanalyzer == 3:
         #ffmpeg pySceneDetect
-        ffmpeg_command="scenedetect --input \""+sourcefile+"\" --stats \""+sourcefile+".stats.csv\" --min-scene-len " + min_scene_len + " time --start "+analyzeskipahead+" --end "+analyzetrimend+" detect-content --threshold "+str(analyzerthreshold)+" list-scenes -f \""+sourcefile+".scenes.csv\""
+        ffmpeg_command="scenedetect --input \""+sourcefile+"\" --stats \""+sourcefile+".stats.csv\" --min-scene-len " + min_scene_len
+        if float(convert_to_seconds(analyzeskipahead)) > 0:
+            ffmpeg_command=ffmpeg_command + " time --start "+ str(analyzeskipahead)
+        if float(convert_to_seconds(analyzetrimend)) > 0:
+            ffmpeg_command=ffmpeg_command +" --end "+ analyzetrimend 
+        ffmpeg_command=ffmpeg_command +" detect-content --threshold "+str(analyzerthreshold)+" list-scenes -f \""+sourcefile+".scenes.csv\""
 
     logger("Running sceneanalyzer with command:"+ffmpeg_command)
 
