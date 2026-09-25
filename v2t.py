@@ -1655,7 +1655,82 @@ if sourcefile.lower().endswith(('.v2t')):
     (sourcewidth,sourceheight,sourcefps,sourcebitrate,sourceduration,hasaudio)=parse_ffprobe_info(sourcefile)
 else:
     if sourcefile[:4]=="http":
-        sourcefile=youtube_dl_get_url(sourcefile)
+        print("Source file is a URL. Do you want to:")
+        print("1) Edit directly from stream (uses yt-dlp to get actual video URL)")
+        print("2) Download the file first and then edit it locally")
+        print("(Press 1 or 2)")
+        
+        while True:
+            choice = getchar()
+            if choice == '1':
+                # Continue with direct streaming approach
+                sourcefile=youtube_dl_get_url(sourcefile)
+                break
+            elif choice == '2':
+                # Download the file first and clean it up
+                print("Downloading video...")
+                try:
+                    # Download using yt-dlp 
+                    download_cmd = ["yt-dlp", sourcefile]
+                    result = subprocess.run(download_cmd, check=True, capture_output=True, text=True)
+                    
+                    # Simple approach - just extract last line that contains filename
+                    output_lines = result.stdout.split('\n')
+                    filename = None
+                    for line in reversed(output_lines):
+                        if 'Downloading' in line and '.mp4' in line or '.mkv' in line or '.webm' in line or '.mov' in line:
+                            # Try to get filename from this line
+                            import re
+                            match = re.search(r'\[download\] (.+?) has already been downloaded', line)
+                            if match:
+                                filename = match.group(1)
+                                break
+                    
+                    # If we can't identify file, try to check current directory for newest file 
+                    if not filename:
+                        import glob
+                        import time
+                        
+                        # Get files created in the last few seconds
+                        current_time = time.time()
+                        recent_files = []
+                        for f in glob.glob("*.*"):
+                            if os.path.isfile(f):
+                                mod_time = os.path.getmtime(f)
+                                if (current_time - mod_time) < 10:  # Last 10 seconds
+                                    recent_files.append(f)
+                        
+                        if recent_files:
+                            # Get the newest one
+                            filename = max(recent_files, key=os.path.getmtime)
+                    
+                    if filename and os.path.exists(filename):
+                        print(f"Downloaded file: {filename}")
+                        
+                        # Clean up filename (remove special chars, spaces -> underscores, lowercase)
+                        cleaned_filename = filename.lower()
+                        import re
+                        cleaned_filename = re.sub(r'[^a-z0-9._-]', '', cleaned_filename)  # Remove special chars
+                        cleaned_filename = re.sub(r'\s+', '_', cleaned_filename)  # Replace spaces with underscores
+                        
+                        # Rename if needed
+                        if cleaned_filename != filename:
+                            os.rename(filename, cleaned_filename)
+                            print(f"Cleaned filename to: {cleaned_filename}")
+                        
+                        # Update sourcefile to point to downloaded file
+                        sourcefile = cleaned_filename
+                    else:
+                        # Fallback to streaming
+                        print("Could not identify downloaded file. Continuing with stream approach.")
+                        sourcefile=youtube_dl_get_url(sourcefile)
+                except Exception as e:
+                    logger("Download failed: " + str(e))
+                    print("Download failed. Continuing with stream approach.")
+                    sourcefile=youtube_dl_get_url(sourcefile)
+                break
+            else:
+                print("Invalid choice. Press 1 or 2:")
 
     state_file_name=sourcefile + ".v2t"
     (sourcewidth,sourceheight,sourcefps,sourcebitrate,sourceduration,hasaudio)=parse_ffprobe_info(sourcefile)
