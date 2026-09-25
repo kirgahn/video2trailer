@@ -286,7 +286,7 @@ def generate_slices(sourceduration, nslices, output_duration, analyzeskipahead, 
         logger("Error: {0}".format(err))
         print("Error: {0}".format(err))
         print("Duration values can only be expressed in integers. (Press any key to continue)")
-        getchar
+        getchar()
 
 def print_duration(slices):
     total_duration=0
@@ -786,8 +786,8 @@ def write_preview(sourcefile,slices,destfile,fps,height,width,sourceheight,bitra
         (ss,se)=slices[i]
         ffmpeg_command=ffmpeg_command + "[0:v]trim="+ str(ss) + ":" + str(se) + ",setpts=PTS-STARTPTS[todraw" + str(i) + "]; "
         ffmpeg_command=ffmpeg_command + "[todraw" + str(i) + "]drawtext=fontsize="+ str(fontsize) + ":fontcolor=black:box=1:boxcolor=white:fontfile=" + font + ":text=" + str(i) + ","
-        ffmpeg_command=ffmpeg_command + "drawtext=fontsize="+ str(fontsize/3) + ":fontcolor=black:box=1:boxcolor=white:fontfile=" + font + ":text='%{pts \:hms \: " + str(ss) + "}':x=main_w/2:y=main_h-text_h-10,"
-        ffmpeg_command=ffmpeg_command + "drawtext=fontsize="+ str(fontsize/3) + ":fontcolor=black:box=1:boxcolor=white:fontfile=" + font + ":text='%{pts \:hms}':x=10:y=main_h-text_h-10"+ "[v" + str(i) + "];"
+        ffmpeg_command=ffmpeg_command + "drawtext=fontsize="+ str(fontsize/3) + ":fontcolor=black:box=1:boxcolor=white:fontfile=" + font + ":text='%{pts\\:hms\\: " + str(ss) + "}':x=main_w/2:y=main_h-text_h-10,"
+        ffmpeg_command=ffmpeg_command + "drawtext=fontsize="+ str(fontsize/3) + ":fontcolor=black:box=1:boxcolor=white:fontfile=" + font + ":text='%{pts\\:hms}':x=10:y=main_h-text_h-10"+ "[v" + str(i) + "];"
         ffmpeg_command=ffmpeg_command + "[0:a]atrim="+ str(ss) + ":" + str(se) + ",asetpts=PTS-STARTPTS[a" + str(i) + "]; "
 
     for i in range(len(slices)):
@@ -1056,25 +1056,71 @@ def external_edit(slices,editor):
 def load_prev_statefile(prev_state_file):
     global state_path
     check_path(state_path)
-    tmpfile=state_path + prev_state_file
-
+    
+    # Get all .v2t files in the state path, sorted by modification time (newest first)
     try:
-        slices=[]
-        with open(tmpfile, encoding='utf-8') as state_file:
-            for a_line in state_file:
-                    slice_line=a_line.rstrip()
-                    slice_line=slice_line.split(")")[1]
-                    ss=convert_to_seconds(slice_line.split('-')[0])
-                    se=convert_to_seconds(slice_line.split('-')[1])
-                    slices.append([ss,se])
-        logger("Recovering slices from specified statefile " + prev_state_file + " succeeded")
-        return(slices)
-
+        state_files = []
+        for file in os.listdir(state_path):
+            if file.endswith('.v2t'):
+                file_path = os.path.join(state_path, file)
+                modified_time = os.path.getmtime(file_path)
+                state_files.append((file, modified_time))
+        
+        # Sort by modification time (newest first)
+        state_files.sort(key=lambda x: x[1], reverse=True)
+        
+        if not state_files:
+            print("No previous state files found in " + state_path)
+            print("(Press any key to continue)")
+            getchar()
+            return None
+        
+        # Display numbered list of state files with timestamps
+        print("\nAvailable previous state files:")
+        print("-" * 60)
+        for i, (filename, mod_time) in enumerate(state_files):
+            timestamp = datetime.fromtimestamp(mod_time).strftime('%Y-%m-%d %H:%M:%S')
+            print(f"{i+1}. {filename} ({timestamp})")
+        
+        print("\nSelect state file to load (number) or 'n' to cancel and keep current slices:")
+        while True:
+            choice = getchar()
+            if choice.lower() == 'n':
+                return None  # User cancelled, don't overwrite slices
+            elif choice.isdigit():
+                index = int(choice) - 1
+                if 0 <= index < len(state_files):
+                    selected_file = state_files[index][0]
+                    tmpfile = state_path + selected_file
+                    
+                    try:
+                        slices = []
+                        with open(tmpfile, encoding='utf-8') as state_file:
+                            for a_line in state_file:
+                                slice_line = a_line.rstrip()
+                                slice_line = slice_line.split(")")[1]
+                                ss = convert_to_seconds(slice_line.split('-')[0])
+                                se = convert_to_seconds(slice_line.split('-')[1])
+                                slices.append([ss, se])
+                        logger("Recovering slices from specified statefile " + selected_file + " succeeded")
+                        return slices
+                    except (ValueError, OSError) as err:
+                        logger("Can't open state file - " + selected_file + " - Error: {0}".format(err))
+                        print("Can't open state file - " + selected_file)
+                        print("Error: {0}".format(err) + " (Press any key to continue)")
+                        getchar()
+                        return None  # Return None on error to avoid overwriting
+                else:
+                    print("Invalid selection. Please try again.")
+            else:
+                print("Invalid input. Please enter a number or 'n' to cancel.")
+        
     except (ValueError, OSError) as err:
-        logger("Can't open state file - " + prev_state_file + " - Error: {0}".format(err))
-        print("Can't open state file - " + prev_state_file)
+        logger("Can't access state files directory - Error: {0}".format(err))
+        print("Can't access state files directory")
         print("Error: {0}".format(err) + " (Press any key to continue)")
         getchar()
+        return None  # Return None on error to avoid overwriting
 
 def youtube_dl_get_url(sourcefile):
     command='yt-dlp -q --no-warnings -f best -g \'' + sourcefile + '\''
@@ -1140,7 +1186,7 @@ def print_source_info(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth
         sfilename=sourcefile
 
     print("source file: \"" + sfilename + "\"")
-    print("resolution: " + str(sourcewidth) + "x" + str(sourceheight) + " - fps: " + str(fps) + " - bitrate: " + str(sourcebitrate) + "k - lenght: " + str(convert_to_minutes(sourceduration)))
+    print("resolution: " + str(sourcewidth) + "x" + str(sourceheight) + " - fps: " + str(sourcefps) + " - bitrate: " + str(sourcebitrate) + "k - lenght: " + str(convert_to_minutes(sourceduration)))
 
 def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourceheight,sourcefps,show_info,show_slice_lenght):
     global state_path
@@ -1389,8 +1435,9 @@ def slices_menu(sourcefile,slices,sourceduration,sourcebitrate,sourcewidth,sourc
                         print("Encoding completed (Press any key to continue)")
                         getchar()
             elif any(q in slices_choice for q in ["9","L","l"]):
-                prev_state_file = input("Please specify the old statefile name: ")
-                slices = load_prev_statefile(prev_state_file)
+                loaded_slices = load_prev_statefile(None)  # Pass None since we handle selection internally
+                if loaded_slices is not None:
+                    slices = loaded_slices
             elif any(q in slices_choice for q in ["10","T","t"]):
                 show_slice_lenght=not show_slice_lenght
             elif any(q in slices_choice for q in ["11","U","u"]):
